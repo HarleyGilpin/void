@@ -1,14 +1,20 @@
 package content.minigame.clan_wars
 
+import content.entity.player.combat.special.MAX_SPECIAL_ATTACK
+import content.entity.player.combat.special.specialAttackEnergy
 import world.gregs.voidps.engine.Script
 import world.gregs.voidps.engine.client.message
 import world.gregs.voidps.engine.client.ui.close
 import world.gregs.voidps.engine.client.ui.open
 import world.gregs.voidps.engine.data.definition.Areas
+import world.gregs.voidps.engine.entity.World.queue
 import world.gregs.voidps.engine.entity.character.move.tele
 import world.gregs.voidps.engine.entity.character.player.chat.ChatType
 import world.gregs.voidps.engine.entity.character.player.combatLevel
+import world.gregs.voidps.engine.entity.character.player.skill.Skill
+import world.gregs.voidps.engine.timer.toTicks
 import world.gregs.voidps.type.Tile
+import java.util.concurrent.TimeUnit
 
 class ClanWarsFreeForAll : Script {
 
@@ -61,10 +67,7 @@ class ClanWarsFreeForAll : Script {
             set(key, if (get(key, 0) == 1) 0 else 1)
         }
 
-        // Clan Wars challenge portal - not yet implemented
-        objectOperate("Enter", "clan_wars_challenge_portal") {
-            message("Clan Wars is still under construction.")
-        }
+        // Clan Wars challenge portal - handled by PvpDemoPortal.kt
 
         // Exit portal - reads varbit 5279 to determine which arena the player entered from
         objectOperate("Leave", "clan_wars_portal_ffa_safe_exit") {
@@ -102,6 +105,19 @@ class ClanWarsFreeForAll : Script {
         exited("clan_wars_ffa_dangerous_arena") {
             clear("in_pvp")
             options.remove("Attack")
+        }
+
+        entered("clan_wars_lobby") {
+            queue("clan_wars_lobby_restore", TimeUnit.SECONDS.toTicks(15)) {
+                levels.set(Skill.Constitution, levels.getMax(Skill.Constitution))
+                levels.set(Skill.Prayer, levels.getMax(Skill.Prayer))
+                specialAttackEnergy = MAX_SPECIAL_ATTACK
+                message("The Clan Wars lobby has fully restored your health, prayer points and special attack.", type = ChatType.Filter)
+            }
+        }
+
+        exited("clan_wars_lobby") {
+            queue.clear("clan_wars_lobby_restore")
         }
 
         // On death in safe arena: keep items, respawn outside
