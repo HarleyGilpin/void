@@ -1,13 +1,21 @@
 package content.entity.player.stat
 
+import content.area.wilderness.inPvp
+import content.area.wilderness.inWilderness
+import content.entity.player.dialogue.type.intEntry
 import net.pearx.kasechange.toSentenceCase
 import world.gregs.voidps.engine.Script
+import world.gregs.voidps.engine.client.message
 import world.gregs.voidps.engine.client.ui.closeInterfaces
 import world.gregs.voidps.engine.client.ui.open
+import world.gregs.voidps.engine.data.Settings
 import world.gregs.voidps.engine.data.definition.InterfaceDefinitions
 import world.gregs.voidps.engine.entity.character.player.Player
 import world.gregs.voidps.engine.entity.character.player.skill.Skill
 import world.gregs.voidps.engine.entity.character.player.skill.Skill.*
+import world.gregs.voidps.engine.entity.character.player.skill.exp.Experience
+import world.gregs.voidps.engine.entity.character.player.skill.level.Level
+import world.gregs.voidps.engine.queue.softQueue
 
 class Stats : Script {
 
@@ -24,6 +32,35 @@ class Stats : Script {
             openGuide(this, skill)
         }
 
+        interfaceOption("Set Level Target", id = "stats:*") {
+            if (!Settings["world.setup.gear", true]) return@interfaceOption
+            val skill = Skill.valueOf(it.component.toSentenceCase())
+            if (skill !in combatSkills) return@interfaceOption
+            if (inPvp || inWilderness) {
+                message("You can't change your stats while in a PvP area.")
+                return@interfaceOption
+            }
+            val level = intEntry("Enter ${skill.name} level (1-99):").coerceIn(1, 99)
+            experience.set(skill, Level.experience(skill, level))
+            levels.set(skill, if (skill == Constitution) level * 10 else level)
+            softQueue("flash_reset", 1) { removeVarbit("skill_stat_flash", skill.name.lowercase()) }
+        }
+
+        interfaceOption("Set XP Target", id = "stats:*") {
+            if (!Settings["world.setup.gear", true]) return@interfaceOption
+            val skill = Skill.valueOf(it.component.toSentenceCase())
+            if (skill !in combatSkills) return@interfaceOption
+            if (inPvp || inWilderness) {
+                message("You can't change your stats while in a PvP area.")
+                return@interfaceOption
+            }
+            val max = Level.experience(skill, 99).toInt()
+            val xp = intEntry("Enter ${skill.name} XP (0-$max):").coerceIn(0, max)
+            experience.set(skill, xp.toDouble())
+            levels.set(skill, Experience.level(skill, xp.toDouble()))
+            softQueue("flash_reset", 1) { removeVarbit("skill_stat_flash", skill.name.lowercase()) }
+        }
+
         interfaceOption("Open subsection", id = "skill_guide:*") {
             val index = (InterfaceDefinitions.getComponent(it.id, it.component)?.index ?: 0) - 10
             val menuIndex = get("active_skill_guide", 1)
@@ -36,6 +73,7 @@ class Stats : Script {
             Attack, Strength, Ranged, Magic, Defence, Constitution, Prayer, Agility, Herblore, Thieving, Crafting, Runecrafting,
             Mining, Smithing, Fishing, Cooking, Firemaking, Woodcutting, Fletching, Slayer, Farming, Construction, Hunter, Summoning, Dungeoneering,
         )
+        private val combatSkills = setOf(Attack, Strength, Defence, Constitution, Ranged, Magic, Prayer, Summoning)
         fun openGuide(player: Player, skill: Skill, subsection: Int = 0) {
             val menuIndex = menu.indexOf(skill) + 1
             player.closeInterfaces()

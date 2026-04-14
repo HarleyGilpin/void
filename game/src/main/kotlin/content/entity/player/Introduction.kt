@@ -74,7 +74,7 @@ class Introduction : Script {
             add("statiuss_warhammer", 999)
             add("morrigans_javelin", 10000000)
             add("morrigans_throwing_axe", 10000000)
-            // Tab 2 - Melee armour & accessories (64 items)
+            // Tab 2 - Melee armour & accessories (67 items)
             add("dragon_defender", 999)
             add("chaotic_kiteshield", 999)
             add("fire_cape", 999)
@@ -119,7 +119,10 @@ class Introduction : Script {
             add("berserker_ring", 999)
             add("warrior_ring", 999)
             add("berserker_necklace", 999)
+            add("phoenix_necklace", 999)
             add("ring_of_vigour", 999)
+            add("ring_of_life", 999)
+            add("ring_of_recoil", 999)
             add("spirit_shield", 999)
             add("blessed_spirit_shield", 999)
             add("arcane_spirit_shield", 999)
@@ -139,7 +142,7 @@ class Introduction : Script {
             add("third_age_platebody", 999)
             add("third_age_platelegs", 999)
             add("third_age_kiteshield", 999)
-            // Tab 3 - Ranged (32 items)
+            // Tab 3 - Ranged (46 items)
             add("magic_shortbow", 999)
             add("dark_bow", 999)
             add("rune_crossbow", 999)
@@ -149,6 +152,19 @@ class Introduction : Script {
             add("karils_crossbow", 999)
             add("rune_arrow", 10000000)
             add("dragon_arrow", 10000000)
+            add("red_chinchompa", 10000000)
+            add("bronze_bolts", 10000000)
+            add("iron_bolts", 10000000)
+            add("steel_bolts", 10000000)
+            add("mithril_bolts", 10000000)
+            add("adamant_bolts", 10000000)
+            add("runite_bolts", 10000000)
+            add("black_bolts", 10000000)
+            add("silver_bolts", 10000000)
+            add("ruby_bolts_e", 10000000)
+            add("diamond_bolts_e", 10000000)
+            add("dragon_bolts_e", 10000000)
+            add("onyx_bolts_e", 10000000)
             add("pernix_cowl", 999)
             add("pernix_body", 999)
             add("pernix_chaps", 999)
@@ -168,6 +184,7 @@ class Introduction : Script {
             add("robin_hood_hat", 999)
             add("archer_helm", 999)
             add("archers_ring", 999)
+            add("avas_accumulator", 999)
             add("third_age_ranger_coif", 999)
             add("third_age_ranger_body", 999)
             add("third_age_ranger_chaps", 999)
@@ -254,8 +271,8 @@ class Introduction : Script {
         }
         // Set bank tab item counts
         player["bank_tab_1"] = 18  // Melee weapons
-        player["bank_tab_2"] = 64  // Melee armour & accessories
-        player["bank_tab_3"] = 32  // Ranged
+        player["bank_tab_2"] = 67  // Melee armour & accessories
+        player["bank_tab_3"] = 46  // Ranged
         player["bank_tab_4"] = 40  // Magic & runes
         player["bank_tab_5"] = 13  // Void & misc
         player["bank_tab_6"] = 9   // Potions & food
