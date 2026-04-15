@@ -2,6 +2,8 @@
 
 package content.entity.player.command
 
+import content.area.wilderness.inPvp
+import content.area.wilderness.inWilderness
 import content.social.trade.exchange.GrandExchange
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import world.gregs.voidps.cache.definition.Params
@@ -9,6 +11,7 @@ import world.gregs.voidps.cache.definition.data.ItemDefinition
 import world.gregs.voidps.engine.Script
 import world.gregs.voidps.engine.client.command.adminCommand
 import world.gregs.voidps.engine.client.command.intArg
+import world.gregs.voidps.engine.client.command.playerCommand
 import world.gregs.voidps.engine.client.command.stringArg
 import world.gregs.voidps.engine.client.message
 import world.gregs.voidps.engine.client.ui.chat.*
@@ -39,7 +42,7 @@ class ItemCommands(
             }
         }
 
-        adminCommand(
+        playerCommand(
             "item",
             stringArg("item-id", autofill = ItemDefinitions.ids.keys),
             intArg("item-amount", "number of items to spawn (e.g. 100, 10k, 5m, default 1)", optional = true),
@@ -96,6 +99,10 @@ class ItemCommands(
     }
 
     private fun spawn(source: Player, target: Player, definition: ItemDefinition, amount: Int) {
+        if (!source.isAdmin() && (target.inWilderness || target.inPvp)) {
+            source.message("You cannot spawn items while in the wilderness or PvP areas.", ChatType.Console)
+            return
+        }
         val id = definition.stringId
         val charges = definition.getOrNull<Int>("charges")
         target.inventory.transaction {
