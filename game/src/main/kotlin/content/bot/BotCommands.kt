@@ -1,5 +1,10 @@
+@file:OptIn(DelicateCoroutinesApi::class, ExperimentalCoroutinesApi::class)
+
 package content.bot
 
+import com.github.michaelbull.logging.InlineLogger
+import content.bot.behaviour.condition.BotEquipmentSetup
+import content.bot.behaviour.condition.BotInventorySetup
 import content.quest.questJournal
 import kotlinx.coroutines.*
 import world.gregs.voidps.engine.Contexts
@@ -23,8 +28,14 @@ import world.gregs.voidps.engine.entity.character.player.appearance
 import world.gregs.voidps.engine.entity.character.player.chat.ChatType
 import world.gregs.voidps.engine.entity.character.player.name
 import world.gregs.voidps.engine.entity.character.player.sex
+import world.gregs.voidps.engine.entity.character.player.skill.Skill
+import world.gregs.voidps.engine.entity.character.player.skill.level.Level
+import world.gregs.voidps.engine.entity.item.Item
 import world.gregs.voidps.engine.inv.add
+import world.gregs.voidps.engine.inv.equipment
 import world.gregs.voidps.engine.inv.inventory
+import world.gregs.voidps.engine.inv.transact.operation.AddItem.add
+import world.gregs.voidps.engine.inv.transact.operation.ClearItem.clear
 import world.gregs.voidps.engine.timer.*
 import world.gregs.voidps.network.client.DummyClient
 import world.gregs.voidps.network.login.protocol.visual.update.player.BodyColour
@@ -42,8 +53,10 @@ class BotCommands(
     accountDefinitions: AccountDefinitions,
 ) : Script {
 
+    private val pvpLogger = InlineLogger("PvpBots")
     val bots = mutableListOf<Player>()
     val names = mutableListOf<String>()
+    private val pvpBotTiers = mutableMapOf<String, PvpTier>()
 
     var counter = 0
 
@@ -61,7 +74,19 @@ class BotCommands(
         playerDespawn {
             if (isBot) {
                 manager.remove(bot)
+                pvpBotTiers.remove(accountName)
             }
+        }
+
+        playerDeath {
+            pvpLogger.info { "playerDeath fired for '$accountName', tier=${pvpBotTiers[accountName]?.activityId}, keys=${pvpBotTiers.keys}" }
+            val tier = pvpBotTiers[accountName] ?: return@playerDeath
+            it.dropItems = false
+            applyTier(bot, tier)
+            manager.stop(bot)
+            bot.blocked.remove(tier.activityId)
+            bot.evaluate.clear()
+            bot.previous = null
         }
 
         worldSpawn {
@@ -76,6 +101,7 @@ class BotCommands(
         adminCommand("clear_bots", intArg("count", optional = true), desc = "Clear all or some amount of bots", handler = ::clear)
         adminCommand("bot", stringArg("task", optional = true, autofill = manager.activityNames), desc = "Toggle yourself on/off as a bot player", handler = ::toggle)
         adminCommand("bot_info", stringArg("name", optional = true, desc = "Filter by bot name", autofill = accountDefinitions.displayNames.keys), desc = "Print bot info", handler = ::info)
+        adminCommand("pvpbots", stringArg("arena", autofill = PVP_ARENAS.keys), intArg("count", optional = true), desc = "Spawn PvP bots for a named arena", handler = ::pvpBots)
     }
 
     private fun loadSettings() {
@@ -88,6 +114,7 @@ class BotCommands(
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun spawn(player: Player, args: List<String>) {
         val count = args[0].toIntOrNull() ?: 1
         GlobalScope.launch {
@@ -104,6 +131,7 @@ class BotCommands(
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun clear(player: Player, args: List<String>) {
         val count = args.getOrNull(0)?.toIntOrNull() ?: MAX_PLAYERS
         World.queue("bot_clear") {
@@ -201,6 +229,97 @@ class BotCommands(
         return bot
     }
 
+    fun pvpBots(player: Player, args: List<String>) {
+        val arenaKey = args[0]
+        val count = args.getOrNull(1)?.toIntOrNull() ?: 14
+        val arena = PVP_ARENAS[arenaKey]
+        if (arena == null) {
+            player.message("Unknown arena '$arenaKey'. Options: ${PVP_ARENAS.keys.joinToString()}.", ChatType.Console)
+            return
+        }
+        GlobalScope.launch {
+            repeat(count) { index ->
+                if (index % Settings["network.maxLoginsPerTick", 25] == 0) {
+                    suspendCancellableCoroutine { cont ->
+                        World.queue("pvpbot_$counter") { cont.resume(Unit) }
+                    }
+                }
+                spawnPvpBot(arena)
+            }
+        }
+    }
+
+    private fun spawnPvpBot(arena: PvpArena) {
+        GlobalScope.launch(Contexts.Game) {
+            counter++
+            val name = pickBotName()
+            val spawn = Areas[arena.spawnArea].random()
+            val bot = Player(tile = spawn, accountName = name).initBot()
+            loader.connect(bot.player, DummyClient(), viewport = Settings["development.bots.live", false])
+            setAppearance(bot.player)
+            bot.player.viewport?.loaded = true
+            bot.player["debug"] = true
+            delay(3)
+            val tier = arena.tiers.random(random)
+            pvpBotTiers[bot.player.accountName] = tier
+            applyTier(bot, tier)
+            manager.add(bot)
+            bot.pinned = tier.activityId
+            bot.available.clear()
+            bot.available.add(tier.activityId)
+            bot.blocked.remove(tier.activityId)
+            manager.assign(bot, tier.activityId)
+            bot.player.running = true
+        }
+    }
+
+    private fun applyTier(bot: Bot, tier: PvpTier) {
+        val target = bot.player
+        for ((skill, level) in tier.levels) {
+            val stored = if (skill == Skill.Constitution) level * 10 else level
+            target.experience.set(skill, Level.experience(skill, stored))
+            target.levels.set(skill, stored)
+        }
+        target["combat_style"] = tier.style
+        val activity = manager.activity(tier.activityId) ?: return
+        target.inventory.transaction { clear() }
+        target.equipment.transaction { clear() }
+        target.inventory.add("coins", 10000)
+        for (condition in activity.setup) {
+            when (condition) {
+                is BotEquipmentSetup -> target.equipment.transaction {
+                    for ((slot, item) in condition.items) {
+                        val id = item.ids.filter { it != "empty" }.randomOrNull() ?: continue
+                        set(slot.index, Item(id, item.min ?: 1))
+                    }
+                }.also { ok -> if (!ok) pvpLogger.warn { "equipment transaction failed for ${target.accountName}: ${target.equipment.transaction.error}" } }
+                is BotInventorySetup -> target.inventory.transaction {
+                    for (item in condition.items) {
+                        val id = item.ids.filter { it != "empty" }.randomOrNull() ?: continue
+                        add(id, item.min ?: 1)
+                    }
+                }.also { ok -> if (!ok) pvpLogger.warn { "inventory transaction failed for ${target.accountName}: ${target.inventory.transaction.error}" } }
+                else -> Unit
+            }
+        }
+        pvpLogger.info { "applyTier ${tier.activityId} for ${target.accountName}: levels=${tier.levels.map { "${it.key}=cur${target.levels.get(it.key)}/max${target.levels.getMax(it.key)}" }}" }
+        pvpLogger.info { "  inventory=${(0 until target.inventory.size).mapNotNull { target.inventory.getOrNull(it) }.filter { it.id.isNotEmpty() }.map { "${it.id}x${it.amount}" }}" }
+        pvpLogger.info { "  equipment=${(0 until target.equipment.size).mapNotNull { target.equipment.getOrNull(it) }.filter { it.id.isNotEmpty() }.map { "${it.id}x${it.amount}" }}" }
+        for (condition in activity.setup) {
+            pvpLogger.info { "  setup.check ${condition::class.simpleName} = ${condition.check(target)}" }
+        }
+    }
+
+    private fun pickBotName(): String {
+        if (Settings["bots.numberedNames", false]) return "Bot $counter"
+        val prefix = Settings["bots.namePrefix", ""].trim('"')
+        val length = 12 - prefix.length
+        val short = names.filter { it.length < length }
+        val selected = short.randomOrNull(random) ?: names.removeAt(random.nextInt(names.size))
+        names.remove(selected)
+        return "$prefix$selected"
+    }
+
     fun setAppearance(player: Player): Player {
         val male = random.nextBoolean()
         player.body.male = male
@@ -224,4 +343,80 @@ class BotCommands(
         player.appearance.emote = 1426
         return player
     }
+
+    companion object {
+        private val ZERKER = mapOf(
+            Skill.Attack to 60,
+            Skill.Strength to 80,
+            Skill.Defence to 45,
+            Skill.Constitution to 75,
+            Skill.Prayer to 44,
+        )
+        private val DHAROKER = mapOf(
+            Skill.Attack to 70,
+            Skill.Strength to 70,
+            Skill.Defence to 70,
+            Skill.Constitution to 70,
+            Skill.Prayer to 43,
+        )
+        private val AGS_MAIN = mapOf(
+            Skill.Attack to 75,
+            Skill.Strength to 85,
+            Skill.Defence to 75,
+            Skill.Constitution to 85,
+            Skill.Prayer to 55,
+        )
+        private val OBBY_PURE = mapOf(
+            Skill.Attack to 1,
+            Skill.Strength to 80,
+            Skill.Defence to 1,
+            Skill.Constitution to 70,
+        )
+        private val MSB_PURE = mapOf(
+            Skill.Attack to 1,
+            Skill.Strength to 1,
+            Skill.Defence to 1,
+            Skill.Constitution to 70,
+            Skill.Ranged to 70,
+        )
+        private val KARILS_TANK = mapOf(
+            Skill.Attack to 1,
+            Skill.Strength to 1,
+            Skill.Defence to 70,
+            Skill.Constitution to 75,
+            Skill.Ranged to 75,
+            Skill.Prayer to 44,
+        )
+
+        private val SAFE_TIERS = listOf(
+            PvpTier("clan_wars_ffa_safe_zerker", ZERKER, "slash"),
+            PvpTier("clan_wars_ffa_safe_dharoker", DHAROKER, "slash"),
+            PvpTier("clan_wars_ffa_safe_ags_main", AGS_MAIN, "slash"),
+            PvpTier("clan_wars_ffa_safe_obby_pure", OBBY_PURE, "crush"),
+            PvpTier("clan_wars_ffa_safe_msb_pure", MSB_PURE, "rapid"),
+            PvpTier("clan_wars_ffa_safe_karils_tank", KARILS_TANK, "rapid"),
+        )
+
+        private val DANGEROUS_TIERS = listOf(
+            PvpTier("clan_wars_ffa_dangerous_zerker", ZERKER, "slash"),
+            PvpTier("clan_wars_ffa_dangerous_dharoker", DHAROKER, "slash"),
+            PvpTier("clan_wars_ffa_dangerous_ags_main", AGS_MAIN, "slash"),
+            PvpTier("clan_wars_ffa_dangerous_obby_pure", OBBY_PURE, "crush"),
+            PvpTier("clan_wars_ffa_dangerous_msb_pure", MSB_PURE, "rapid"),
+            PvpTier("clan_wars_ffa_dangerous_karils_tank", KARILS_TANK, "rapid"),
+        )
+
+        private val PVP_ARENAS = mapOf(
+            "clan_wars_ffa_safe" to PvpArena("clan_wars_teleport", SAFE_TIERS),
+            "clan_wars_ffa_dangerous" to PvpArena("clan_wars_teleport", DANGEROUS_TIERS),
+        )
+    }
 }
+
+private data class PvpArena(val spawnArea: String, val tiers: List<PvpTier>)
+
+private data class PvpTier(
+    val activityId: String,
+    val levels: Map<Skill, Int>,
+    val style: String,
+)

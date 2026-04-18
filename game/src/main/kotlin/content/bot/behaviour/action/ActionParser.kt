@@ -1,6 +1,7 @@
 package content.bot.behaviour.action
 
 import content.bot.behaviour.condition.Condition
+import content.bot.behaviour.utility.UtilityCurveParser
 
 sealed class ActionParser {
     open val required = emptySet<String>()
@@ -39,6 +40,86 @@ sealed class ActionParser {
             } else {
                 BotInteractNpc(option, id, delay, success, radius)
             }
+        }
+    }
+
+    object InteractPlayerParser : ActionParser() {
+        override val required = setOf("option")
+        override val optional = setOf("delay", "success", "radius", "heal_percent", "loot_over_value", "target_score")
+
+        @Suppress("UNCHECKED_CAST")
+        override fun parse(map: Map<String, Any>): BotAction {
+            val option = map["option"] as String
+            require(option == "Attack") { "Only 'Attack' option is supported for 'player' actions, got '$option'." }
+            val delay = map["delay"] as? Int ?: 0
+            val success = requirement(map, "success").singleOrNull()
+            val radius = map["radius"] as? Int ?: 10
+            val healPercent = map["heal_percent"] as? Int ?: 20
+            val lootOverValue = map["loot_over_value"] as? Int ?: 0
+            val rawScore = map["target_score"] as? List<Map<String, Any>>
+            val scorer = rawScore?.let { UtilityCurveParser.parseScorer(it) }
+            return BotFightPlayer(delay, success, radius, healPercent, lootOverValue, scorer)
+        }
+    }
+
+    object PrayParser : ActionParser() {
+        override val required = setOf("id")
+        override val optional = setOf("if")
+
+        override fun parse(map: Map<String, Any>): BotAction {
+            val id = map["id"] as String
+            val condition = requirement(map, "if").singleOrNull()
+            return BotPray(id, condition)
+        }
+    }
+
+    object SpecAttackParser : ActionParser() {
+        override val required = setOf("weapon", "fallback")
+        override val optional = setOf("min_energy", "if")
+
+        override fun parse(map: Map<String, Any>): BotAction {
+            val weapon = map["weapon"] as String
+            val fallback = map["fallback"] as String
+            val minEnergy = map["min_energy"] as? Int ?: 250
+            val condition = requirement(map, "if").singleOrNull()
+            return BotSpecAttack(weapon, fallback, minEnergy, condition)
+        }
+    }
+
+    object SwitchSetupParser : ActionParser() {
+        override val required = setOf("equipment")
+        override val optional = setOf("if")
+
+        @Suppress("UNCHECKED_CAST")
+        override fun parse(map: Map<String, Any>): BotAction {
+            val raw = map["equipment"] as? Map<String, Any>
+                ?: error("switch_setup 'equipment' must be a map in $map.")
+            val setup = Condition.parse(listOf("equipment" to listOf(raw)), "SwitchSetupParser").single()
+            val equipment = (setup as content.bot.behaviour.condition.BotEquipmentSetup).items
+            val condition = requirement(map, "if").singleOrNull()
+            return BotSwitchSetup(equipment, condition)
+        }
+    }
+
+    object RepositionParser : ActionParser() {
+        override val optional = setOf("radius", "if")
+
+        override fun parse(map: Map<String, Any>): BotAction {
+            val radius = map["radius"] as? Int ?: 1
+            val condition = requirement(map, "if").singleOrNull()
+            return BotReposition(radius, condition)
+        }
+    }
+
+    object RetreatParser : ActionParser() {
+        override val required = setOf("safe_area", "regroup_hp_percent")
+        override val optional = setOf("if")
+
+        override fun parse(map: Map<String, Any>): BotAction {
+            val safeArea = map["safe_area"] as String
+            val regroup = map["regroup_hp_percent"] as Int
+            val condition = requirement(map, "if").singleOrNull()
+            return BotRetreat(safeArea, regroup, condition)
         }
     }
 
@@ -225,6 +306,7 @@ sealed class ActionParser {
 
         private val parsers = mapOf(
             "npc" to InteractNpcParser,
+            "player" to InteractPlayerParser,
             "object" to InteractObjectParser,
             "floor_item" to InteractFloorItemParser,
             "item_on_object" to ItemOnObjectParser,
@@ -234,6 +316,11 @@ sealed class ActionParser {
             "wait" to WaitParser,
             "restart" to RestartParser,
             "interface" to InterfaceParser,
+            "pray" to PrayParser,
+            "spec_attack" to SpecAttackParser,
+            "switch_setup" to SwitchSetupParser,
+            "retreat" to RetreatParser,
+            "reposition" to RepositionParser,
             "interface_close" to CloseInterfaceParser,
             "continue" to DialogueParser,
             "enter" to EnterParser,

@@ -104,7 +104,56 @@ sealed class Condition(val priority: Int) {
             "interface_closed" -> parseInterfaceClosed(list)
             "mode" -> parseMode(list)
             "skill" -> parseSkills(list)
+            "attacker_style" -> parseAttackerStyle(list)
+            "target_armor_type" -> parseTargetArmorType(list)
+            "outmatched" -> parseOutmatched(list)
+            "allies_on_tile" -> parseAlliesOnTile(list)
+            "target_hp_percent" -> parseTargetHpPercent(list)
+            "role" -> parseRole(list)
             else -> null
+        }
+
+        private fun parseEnumSet(list: List<Map<String, Any>>): Set<String>? {
+            val map = list.single()
+            val raw = map["equals"] as? String ?: return null
+            return raw.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        }
+
+        private fun parseAttackerStyle(list: List<Map<String, Any>>): Condition? {
+            val equals = parseEnumSet(list) ?: return null
+            return BotAttackerStyle(equals)
+        }
+
+        private fun parseTargetArmorType(list: List<Map<String, Any>>): Condition? {
+            val equals = parseEnumSet(list) ?: return null
+            return BotTargetArmorType(equals)
+        }
+
+        private fun parseOutmatched(list: List<Map<String, Any>>): Condition? {
+            val map = list.single()
+            val attackersMin = map["attackers_min"] as? Int
+            val ownHpPercentMax = (map["own_hp_percent_max"] as? Number)?.toDouble()
+            if (attackersMin == null && ownHpPercentMax == null) return null
+            return BotOutmatched(attackersMin = attackersMin, ownHpPercentMax = ownHpPercentMax)
+        }
+
+        private fun parseAlliesOnTile(list: List<Map<String, Any>>): Condition? {
+            val map = list.single()
+            if (!map.containsKey("min") && !map.containsKey("max")) return null
+            return BotAlliesOnTile(min = map["min"] as? Int, max = map["max"] as? Int)
+        }
+
+        private fun parseTargetHpPercent(list: List<Map<String, Any>>): Condition? {
+            val map = list.single()
+            val min = (map["min"] as? Number)?.toDouble()
+            val max = (map["max"] as? Number)?.toDouble()
+            if (min == null && max == null) return null
+            return BotTargetHpPercent(min = min, max = max)
+        }
+
+        private fun parseRole(list: List<Map<String, Any>>): Condition? {
+            val equals = parseEnumSet(list) ?: return null
+            return BotRoleCondition(equals.map { it.lowercase() }.toSet())
         }
 
         private fun parseInventory(list: List<Map<String, Any>>): BotInventorySetup = BotInventorySetup(parseItems(list))
@@ -239,7 +288,8 @@ sealed class Condition(val priority: Int) {
         private fun parseArea(list: List<Map<String, Any>>): Condition? {
             val map = list.single()
             if (map.containsKey("id")) {
-                return BotInArea(id = map["id"] as String)
+                val present = map["present"] as? Boolean ?: true
+                return BotInArea(id = map["id"] as String, present = present)
             }
             return null
         }
@@ -292,7 +342,7 @@ sealed class Condition(val priority: Int) {
             when (condition) {
                 is BotCombatLevel -> {
                     val skills = setOf(Skill.Attack, Skill.Strength, Skill.Defence, Skill.Constitution, Skill.Ranged, Skill.Magic, Skill.Prayer)
-                    for (i in 0 until 50) {
+                    for (@Suppress("UNUSED_PARAMETER") i in 0 until 50) {
                         val skill = skills.random(random)
                         val level = (player.levels.getMax(skill) + 5).coerceAtMost(99)
                         player.levels.set(skill, level)
