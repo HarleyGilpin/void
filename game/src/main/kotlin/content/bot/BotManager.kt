@@ -182,6 +182,9 @@ class BotManager(
      * When no available activity is found either idle or spawn requirements for a bot
      */
     private fun activityFallback(bot: Bot): BotActivity {
+        if (bot.pinned != null) {
+            return idle
+        }
         if (!Settings["bots.spawnRequirements", false] || bot.player.networked) {
             return idle
         }
@@ -369,7 +372,10 @@ class BotManager(
             bot.frames.pop()
         }
         if (behaviour is BotActivity) {
-            bot.blocked.add(behaviour.id)
+            val pinnedSoft = bot.pinned == behaviour.id && state.reason !is Reason.Cancelled
+            if (!pinnedSoft) {
+                bot.blocked.add(behaviour.id)
+            }
             slots.release(behaviour)
         }
     }

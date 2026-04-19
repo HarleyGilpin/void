@@ -109,8 +109,27 @@ sealed class Condition(val priority: Int) {
             "outmatched" -> parseOutmatched(list)
             "allies_on_tile" -> parseAlliesOnTile(list)
             "target_hp_percent" -> parseTargetHpPercent(list)
+            "target_frozen" -> parseTargetFrozen(list)
             "role" -> parseRole(list)
+            "any" -> parseAny(list)
             else -> null
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        private fun parseAny(list: List<Map<String, Any>>): Condition {
+            val children = mutableListOf<Condition>()
+            for (map in list) {
+                val key = map.keys.singleOrNull() ?: error("any child must be single-key map: $map")
+                val value = map[key]
+                val subList: List<Map<String, Any>> = when (value) {
+                    is Map<*, *> -> listOf(value as Map<String, Any>)
+                    is List<*> -> value as List<Map<String, Any>>
+                    else -> error("any child value must be map or list: $map")
+                }
+                val child = parse(key, subList) ?: error("No condition parser for '$key' in any.")
+                children.add(child)
+            }
+            return BotAnyCondition(children)
         }
 
         private fun parseEnumSet(list: List<Map<String, Any>>): Set<String>? {
@@ -149,6 +168,13 @@ sealed class Condition(val priority: Int) {
             val max = (map["max"] as? Number)?.toDouble()
             if (min == null && max == null) return null
             return BotTargetHpPercent(min = min, max = max)
+        }
+
+        private fun parseTargetFrozen(list: List<Map<String, Any>>): Condition {
+            val map = list.singleOrNull() ?: emptyMap()
+            val hpMin = (map["hp_min"] as? Number)?.toDouble()
+            val hpMax = (map["hp_max"] as? Number)?.toDouble()
+            return BotTargetFrozen(hpMin = hpMin, hpMax = hpMax)
         }
 
         private fun parseRole(list: List<Map<String, Any>>): Condition? {
