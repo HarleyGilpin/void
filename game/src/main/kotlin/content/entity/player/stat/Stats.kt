@@ -41,8 +41,9 @@ class Stats : Script {
             }
             val maxLevel = if (skill == Dungeoneering) 120 else 99
             val level = intEntry("Enter ${skill.name} level (1-$maxLevel):").coerceIn(1, maxLevel)
-            experience.set(skill, Level.experience(skill, level))
-            levels.set(skill, if (skill == Constitution) level * 10 else level)
+            val scaledLevel = if (skill == Constitution) level * 10 else level
+            experience.set(skill, Level.experience(skill, scaledLevel))
+            levels.set(skill, scaledLevel)
             softQueue("flash_reset", 1) { removeVarbit("skill_stat_flash", skill.name.lowercase()) }
         }
 
@@ -54,11 +55,12 @@ class Stats : Script {
                 return@interfaceOption
             }
             val maxLevel = if (skill == Dungeoneering) 120 else 99
-            val max = Level.experience(skill, maxLevel).toInt()
+            val scaledMax = if (skill == Constitution) maxLevel * 10 else maxLevel
+            val max = Level.experience(skill, scaledMax).toInt()
             val xp = intEntry("Enter ${skill.name} XP (0-$max):").coerceIn(0, max)
             experience.set(skill, xp.toDouble())
             val newLevel = Experience.level(skill, xp.toDouble())
-            levels.set(skill, if (skill == Constitution) newLevel * 10 else newLevel)
+            levels.set(skill, newLevel)
             softQueue("flash_reset", 1) { removeVarbit("skill_stat_flash", skill.name.lowercase()) }
         }
 
