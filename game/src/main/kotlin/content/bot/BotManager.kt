@@ -14,9 +14,9 @@ import content.bot.behaviour.activity.BotActivity
 import content.bot.behaviour.condition.Condition
 import content.bot.behaviour.loadBehaviours
 import content.bot.behaviour.perception.BotCombatContextBuilder
+import content.bot.behaviour.condition.BotInArea
 import content.bot.behaviour.setup.DynamicResolvers
 import content.bot.behaviour.setup.Resolver
-import content.area.wilderness.inPvp
 import world.gregs.voidps.engine.data.ConfigFiles
 import world.gregs.voidps.engine.data.Settings
 import world.gregs.voidps.engine.event.AuditLog
@@ -291,13 +291,12 @@ class BotManager(
             return
         }
         val debug = bot.player["debug", false]
-        val pinnedInPvp = bot.pinned == behaviour.id && bot.player.inPvp
         var refreshed = false
         for (requirement in behaviour.setup) {
             if (requirement.check(bot.player)) {
                 continue
             }
-            if (pinnedInPvp) {
+            if (bot.pinned == behaviour.id && requirement !is BotInArea) {
                 if (!refreshed) {
                     bot.refresh?.invoke()
                     refreshed = true
