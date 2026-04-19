@@ -35,12 +35,12 @@ class Stats : Script {
         interfaceOption("Set Level Target", id = "stats:*") {
             if (!Settings["world.setup.gear", true]) return@interfaceOption
             val skill = Skill.valueOf(it.component.toSentenceCase())
-            if (skill !in combatSkills) return@interfaceOption
             if (inPvp || inWilderness) {
                 message("You can't change your stats while in a PvP area.")
                 return@interfaceOption
             }
-            val level = intEntry("Enter ${skill.name} level (1-99):").coerceIn(1, 99)
+            val maxLevel = if (skill == Dungeoneering) 120 else 99
+            val level = intEntry("Enter ${skill.name} level (1-$maxLevel):").coerceIn(1, maxLevel)
             experience.set(skill, Level.experience(skill, level))
             levels.set(skill, if (skill == Constitution) level * 10 else level)
             softQueue("flash_reset", 1) { removeVarbit("skill_stat_flash", skill.name.lowercase()) }
@@ -49,15 +49,16 @@ class Stats : Script {
         interfaceOption("Set XP Target", id = "stats:*") {
             if (!Settings["world.setup.gear", true]) return@interfaceOption
             val skill = Skill.valueOf(it.component.toSentenceCase())
-            if (skill !in combatSkills) return@interfaceOption
             if (inPvp || inWilderness) {
                 message("You can't change your stats while in a PvP area.")
                 return@interfaceOption
             }
-            val max = Level.experience(skill, 99).toInt()
+            val maxLevel = if (skill == Dungeoneering) 120 else 99
+            val max = Level.experience(skill, maxLevel).toInt()
             val xp = intEntry("Enter ${skill.name} XP (0-$max):").coerceIn(0, max)
             experience.set(skill, xp.toDouble())
-            levels.set(skill, Experience.level(skill, xp.toDouble()))
+            val newLevel = Experience.level(skill, xp.toDouble())
+            levels.set(skill, if (skill == Constitution) newLevel * 10 else newLevel)
             softQueue("flash_reset", 1) { removeVarbit("skill_stat_flash", skill.name.lowercase()) }
         }
 
@@ -73,7 +74,6 @@ class Stats : Script {
             Attack, Strength, Ranged, Magic, Defence, Constitution, Prayer, Agility, Herblore, Thieving, Crafting, Runecrafting,
             Mining, Smithing, Fishing, Cooking, Firemaking, Woodcutting, Fletching, Slayer, Farming, Construction, Hunter, Summoning, Dungeoneering,
         )
-        private val combatSkills = setOf(Attack, Strength, Defence, Constitution, Ranged, Magic, Prayer, Summoning)
         fun openGuide(player: Player, skill: Skill, subsection: Int = 0) {
             val menuIndex = menu.indexOf(skill) + 1
             player.closeInterfaces()
