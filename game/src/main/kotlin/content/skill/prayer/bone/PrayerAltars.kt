@@ -8,11 +8,8 @@ import world.gregs.voidps.engine.entity.character.player.skill.Skill
 class PrayerAltars : Script {
 
     init {
-        objectOperate("Pray", "prayer_altar_*") {
-            pray()
-        }
-
-        objectOperate("Pray-at", "prayer_altar_*") {
+        objectOperate("Pray", "prayer_altar_*") { (target) ->
+            if (target.def(this).stringId == "prayer_altar_of_zaros") return@objectOperate
             pray()
         }
 

@@ -1,3 +1,4 @@
 spawns = [
     { id = "bank_chest_castle_wars", x = 3279, y = 3684, type = 10, rotation = 1 },
+    { id = "prayer_altar_of_zaros", x = 3265, y = 3673, type = 10, rotation = 3 },
 ]
