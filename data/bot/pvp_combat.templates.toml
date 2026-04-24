@@ -25,11 +25,7 @@ setup = [
 actions = [
     { interface = { option = "Select", id = "combat_styles:$style" } },
     { retreat = { safe_area = "$safe_area", regroup_hp_percent = 60, if = { outmatched = { attackers_min = 2, own_hp_percent_max = 0.25 } } } },
-    { player = { option = "Attack", radius = 10, delay = 1, heal_percent = 40, area = "$area", success = { area = { id = "$area", present = false } }, target_score = [
-        { input = "target_hp_percent", curve = { type = "linear", min = 1.0, max = 0.0 }, weight = 1.5 },
-        { input = "distance", curve = { type = "linear", min = 10.0, max = 0.0 }, weight = 1.0 },
-        { input = "attacker_of_ally", curve = { type = "linear", min = 0.0, max = 1.0 }, weight = 0.75 },
-    ] } },
+    { player = { option = "Attack", radius = 10, delay = 1, heal_percent = 40, area = "$area", success = { area = { id = "$area", present = false } } } },
     { restart = { success = { area = { id = "$area", present = false } } } },
 ]
 reactive = [
@@ -67,11 +63,7 @@ setup = [
 actions = [
     { interface = { option = "Select", id = "combat_styles:$style" } },
     { retreat = { safe_area = "$safe_area", regroup_hp_percent = 70, if = { outmatched = { attackers_min = 3 } } } },
-    { player = { option = "Attack", radius = 10, delay = 1, heal_percent = 25, area = "$area", success = { area = { id = "$area", present = false } }, target_score = [
-        { input = "target_hp_percent", curve = { type = "linear", min = 1.0, max = 0.0 }, weight = 1.5 },
-        { input = "distance", curve = { type = "linear", min = 10.0, max = 0.0 }, weight = 1.0 },
-        { input = "attacker_of_ally", curve = { type = "linear", min = 0.0, max = 1.0 }, weight = 0.75 },
-    ] } },
+    { player = { option = "Attack", radius = 10, delay = 1, heal_percent = 25, area = "$area", success = { area = { id = "$area", present = false } } } },
     { restart = { success = { area = { id = "$area", present = false } } } },
 ]
 reactive = [
@@ -109,11 +101,7 @@ setup = [
 actions = [
     { interface = { option = "Select", id = "combat_styles:$style" } },
     { retreat = { safe_area = "$safe_area", regroup_hp_percent = 70, if = { outmatched = { attackers_min = 3 } } } },
-    { player = { option = "Attack", radius = 10, delay = 1, heal_percent = 40, area = "$area", success = { area = { id = "$area", present = false } }, target_score = [
-        { input = "target_hp_percent", curve = { type = "linear", min = 1.0, max = 0.0 }, weight = 1.5 },
-        { input = "distance", curve = { type = "linear", min = 10.0, max = 0.0 }, weight = 1.0 },
-        { input = "attacker_of_ally", curve = { type = "linear", min = 0.0, max = 1.0 }, weight = 0.75 },
-    ] } },
+    { player = { option = "Attack", radius = 10, delay = 1, heal_percent = 40, area = "$area", success = { area = { id = "$area", present = false } } } },
     { restart = { success = { area = { id = "$area", present = false } } } },
 ]
 reactive = [
@@ -147,11 +135,7 @@ setup = [
 ]
 actions = [
     { retreat = { safe_area = "$safe_area", regroup_hp_percent = 60, if = { outmatched = { attackers_min = 2, own_hp_percent_max = 0.25 } } } },
-    { player = { option = "Attack", radius = 10, delay = 1, heal_percent = 40, area = "$area", success = { area = { id = "$area", present = false } }, target_score = [
-        { input = "target_hp_percent", curve = { type = "linear", min = 1.0, max = 0.0 }, weight = 1.5 },
-        { input = "distance", curve = { type = "linear", min = 10.0, max = 0.0 }, weight = 1.0 },
-        { input = "attacker_of_ally", curve = { type = "linear", min = 0.0, max = 1.0 }, weight = 0.75 },
-    ] } },
+    { player = { option = "Attack", radius = 10, delay = 1, heal_percent = 40, area = "$area", success = { area = { id = "$area", present = false } } } },
     { restart = { success = { area = { id = "$area", present = false } } } },
 ]
 reactive = [
@@ -180,11 +164,7 @@ setup = [
 actions = [
     { interface = { option = "Select", id = "combat_styles:$style" } },
     { retreat = { safe_area = "$safe_area", regroup_hp_percent = 50, if = { outmatched = { attackers_min = 2, own_hp_percent_max = 0.25 } } } },
-    { player = { option = "Attack", radius = 12, delay = 1, heal_percent = 40, area = "$area", success = { area = { id = "$area", present = false } }, target_score = [
-        { input = "target_hp_percent", curve = { type = "linear", min = 1.0, max = 0.0 }, weight = 2.0 },
-        { input = "distance", curve = { type = "linear", min = 12.0, max = 0.0 }, weight = 0.5 },
-        { input = "attacker_of_ally", curve = { type = "linear", min = 0.0, max = 1.0 }, weight = 1.0 },
-    ] } },
+    { player = { option = "Attack", radius = 12, delay = 1, heal_percent = 40, area = "$area", success = { area = { id = "$area", present = false } } } },
     { restart = { success = { area = { id = "$area", present = false } } } },
 ]
 reactive = [
@@ -217,11 +197,7 @@ setup = [
 actions = [
     { interface = { option = "Select", id = "combat_styles:$style" } },
     { retreat = { safe_area = "$safe_area", regroup_hp_percent = 70, if = { outmatched = { attackers_min = 3 } } } },
-    { player = { option = "Attack", radius = 12, delay = 1, heal_percent = 40, area = "$area", success = { area = { id = "$area", present = false } }, target_score = [
-        { input = "target_hp_percent", curve = { type = "linear", min = 1.0, max = 0.0 }, weight = 2.0 },
-        { input = "distance", curve = { type = "linear", min = 12.0, max = 0.0 }, weight = 0.5 },
-        { input = "attacker_of_ally", curve = { type = "linear", min = 0.0, max = 1.0 }, weight = 1.0 },
-    ] } },
+    { player = { option = "Attack", radius = 12, delay = 1, heal_percent = 40, area = "$area", success = { area = { id = "$area", present = false } } } },
     { restart = { success = { area = { id = "$area", present = false } } } },
 ]
 reactive = [
@@ -259,11 +235,7 @@ setup = [
 ]
 actions = [
     { retreat = { safe_area = "$safe_area", regroup_hp_percent = 60, if = { outmatched = { attackers_min = 3 } } } },
-    { cast_spell = { family = "ice", radius = 12, delay = 1, heal_percent = 40, kite = true, area = "$area", success = { area = { id = "$area", present = false } }, target_score = [
-        { input = "target_hp_percent", curve = { type = "linear", min = 1.0, max = 0.0 }, weight = 2.0 },
-        { input = "distance", curve = { type = "linear", min = 12.0, max = 0.0 }, weight = 0.5 },
-        { input = "attacker_of_ally", curve = { type = "linear", min = 0.0, max = 1.0 }, weight = 1.0 },
-    ] } },
+    { cast_spell = { family = "ice", radius = 12, delay = 1, heal_percent = 40, kite = true, area = "$area", success = { area = { id = "$area", present = false } } } },
     { restart = { success = { area = { id = "$area", present = false } } } },
 ]
 reactive = [
@@ -307,11 +279,7 @@ setup = [
 ]
 actions = [
     { retreat = { safe_area = "$safe_area", regroup_hp_percent = 65, if = { outmatched = { attackers_min = 3 } } } },
-    { cast_spell = { family = "ice", radius = 12, delay = 1, heal_percent = 40, kite = true, area = "$area", success = { area = { id = "$area", present = false } }, target_score = [
-        { input = "target_hp_percent", curve = { type = "linear", min = 1.0, max = 0.0 }, weight = 2.0 },
-        { input = "distance", curve = { type = "linear", min = 12.0, max = 0.0 }, weight = 0.5 },
-        { input = "attacker_of_ally", curve = { type = "linear", min = 0.0, max = 1.0 }, weight = 1.0 },
-    ] } },
+    { cast_spell = { family = "ice", radius = 12, delay = 1, heal_percent = 40, kite = true, area = "$area", success = { area = { id = "$area", present = false } } } },
     { restart = { success = { area = { id = "$area", present = false } } } },
 ]
 reactive = [
