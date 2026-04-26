@@ -113,6 +113,7 @@ class BotCommands(
             val slayer = killer as? Player ?: return@playerDeath
             if (!slayer.isBot) return@playerDeath
             slayer.start("loot_pending", LOOT_PENDING_TICKS)
+            slayer["loot_drop_tile"] = tile.id
         }
 
         worldSpawn {
