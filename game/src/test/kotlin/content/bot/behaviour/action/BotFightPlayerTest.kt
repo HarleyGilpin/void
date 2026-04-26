@@ -144,6 +144,127 @@ class BotFightPlayerTest {
     }
 
     @Test
+    fun `Wealth strategy loots highest value item first`() {
+        ItemDefinitions.set(
+            arrayOf(
+                ItemDefinition(id = 200, cost = 100, floorOptions = arrayOf("Take"), stackable = 1),
+                ItemDefinition(id = 201, cost = 5_000, floorOptions = arrayOf("Take"), stackable = 1),
+            ),
+            mapOf("trinket" to 0, "rune" to 1),
+        )
+        FloorItems.add(player.tile, "trinket", 1, owner = player.accountName)
+        FloorItems.add(player.tile, "rune", 1, owner = player.accountName)
+        FloorItems.run()
+        player.start("loot_pending", 60)
+
+        var pickedId = -1
+        val world = FakeWorld(
+            execute = { _, instruction ->
+                if (instruction is InteractFloorItem) {
+                    pickedId = instruction.id
+                }
+                true
+            },
+        )
+
+        val action = BotFightPlayer(lootStrategy = BotLootStrategy.WEALTH)
+
+        action.update(bot, world, BehaviourFrame(FakeBehaviour()))
+
+        assertEquals(201, pickedId)
+    }
+
+    @Test
+    fun `Survival strategy skips non-consumable loot`() {
+        ItemDefinitions.set(
+            arrayOf(ItemDefinition(id = 300, cost = 1_000, floorOptions = arrayOf("Take"), stackable = 1)),
+            mapOf("rune_axe" to 0),
+        )
+        FloorItems.add(player.tile, "rune_axe", 1, owner = player.accountName)
+        FloorItems.run()
+        player.start("loot_pending", 60)
+
+        var called = false
+        val world = FakeWorld(
+            execute = { _, instruction ->
+                if (instruction is InteractFloorItem) called = true
+                true
+            },
+        )
+
+        val action = BotFightPlayer(lootStrategy = BotLootStrategy.SURVIVAL)
+
+        action.update(bot, world, BehaviourFrame(FakeBehaviour()))
+
+        assertTrue(!called)
+    }
+
+    @Test
+    fun `Survival strategy loots edible items`() {
+        ItemDefinitions.set(
+            arrayOf(
+                ItemDefinition(id = 400, cost = 10, floorOptions = arrayOf("Take"), options = arrayOf("Eat"), stackable = 0),
+                ItemDefinition(id = 401, cost = 9_999, floorOptions = arrayOf("Take"), stackable = 1),
+            ),
+            mapOf("shark" to 0, "diamond" to 1),
+        )
+        FloorItems.add(player.tile, "shark", 1, owner = player.accountName)
+        FloorItems.add(player.tile, "diamond", 1, owner = player.accountName)
+        FloorItems.run()
+        player.start("loot_pending", 60)
+
+        var pickedId = -1
+        val world = FakeWorld(
+            execute = { _, instruction ->
+                if (instruction is InteractFloorItem) {
+                    pickedId = instruction.id
+                }
+                true
+            },
+        )
+
+        val action = BotFightPlayer(lootStrategy = BotLootStrategy.SURVIVAL)
+
+        action.update(bot, world, BehaviourFrame(FakeBehaviour()))
+
+        assertEquals(400, pickedId)
+    }
+
+    @Test
+    fun `Survival strategy loots potions identified by categories`() {
+        ItemDefinitions.set(
+            arrayOf(
+                ItemDefinition(
+                    id = 500,
+                    cost = 50,
+                    floorOptions = arrayOf("Take"),
+                    options = arrayOf(null),
+                    params = mapOf(5019 to setOf("potion")),
+                    stackable = 0,
+                ),
+            ),
+            mapOf("super_restore_4" to 0),
+        )
+        FloorItems.add(player.tile, "super_restore_4", 1, owner = player.accountName)
+        FloorItems.run()
+        player.start("loot_pending", 60)
+
+        var called = false
+        val world = FakeWorld(
+            execute = { _, instruction ->
+                if (instruction is InteractFloorItem) called = true
+                true
+            },
+        )
+
+        val action = BotFightPlayer(lootStrategy = BotLootStrategy.SURVIVAL)
+
+        action.update(bot, world, BehaviourFrame(FakeBehaviour()))
+
+        assertTrue(called)
+    }
+
+    @Test
     fun `No target without success returns failed`() {
         val action = BotFightPlayer()
 

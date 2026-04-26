@@ -17,6 +17,7 @@ import world.gregs.voidps.engine.entity.character.mode.interact.PlayerOnPlayerIn
 import world.gregs.voidps.engine.entity.character.player.Player
 import world.gregs.voidps.engine.entity.character.player.Players
 import world.gregs.voidps.engine.entity.character.player.skill.Skill
+import world.gregs.voidps.engine.entity.item.floor.FloorItem
 import world.gregs.voidps.engine.entity.item.floor.FloorItems
 import world.gregs.voidps.engine.inv.inventory
 import world.gregs.voidps.engine.map.Spiral
@@ -31,6 +32,7 @@ data class BotFightPlayer(
     val radius: Int = 10,
     val healPercentage: Int = 20,
     val lootOverValue: Int = 0,
+    val lootStrategy: BotLootStrategy = BotLootStrategy.DEFAULT,
     val targetScorer: TargetScorer? = null,
     val area: String? = null,
 ) : BotAction {
@@ -90,22 +92,15 @@ data class BotFightPlayer(
         val player = bot.player
         val attackOption = player.options.indexOf("Attack")
         if (player.hasClock("loot_pending")) {
-            for (tile in Spiral.spiral(player.tile, radius)) {
-                for (item in FloorItems.at(tile)) {
-                    if (item.owner != player.accountName) {
-                        continue
-                    }
-                    if (item.def.cost <= lootOverValue) {
-                        continue
-                    }
-                    val index = item.def.floorOptions.indexOf("Take")
-                    val valid = world.execute(bot.player, InteractFloorItem(item.def.id, item.tile.x, item.tile.y, index))
-                    if (!valid) {
-                        return BehaviourState.Failed(Reason.Invalid("Invalid floor item interaction: $item $index"))
-                    }
-                    player.stop("loot_pending")
-                    return BehaviourState.Running
+            val target = pickLoot(player)
+            if (target != null) {
+                val index = target.def.floorOptions.indexOf("Take")
+                val valid = world.execute(bot.player, InteractFloorItem(target.def.id, target.tile.x, target.tile.y, index))
+                if (!valid) {
+                    return BehaviourState.Failed(Reason.Invalid("Invalid floor item interaction: $target $index"))
                 }
+                player.stop("loot_pending")
+                return BehaviourState.Running
             }
         }
         if (attackOption == -1) {
@@ -121,6 +116,33 @@ data class BotFightPlayer(
         }
         if (BotArenaCenter.maybeRecenter(bot, world, area)) return BehaviourState.Running
         return handleNoTarget()
+    }
+
+    private fun pickLoot(player: Player): FloorItem? {
+        var best: FloorItem? = null
+        var bestScore = Long.MIN_VALUE
+        for (tile in Spiral.spiral(player.tile, radius)) {
+            for (item in FloorItems.at(tile)) {
+                if (item.owner != player.accountName) {
+                    continue
+                }
+                if (item.def.cost <= lootOverValue) {
+                    continue
+                }
+                if (!lootStrategy.accepts(item)) {
+                    continue
+                }
+                if (!lootStrategy.ranks()) {
+                    return item
+                }
+                val score = lootStrategy.score(item)
+                if (score > bestScore) {
+                    bestScore = score
+                    best = item
+                }
+            }
+        }
+        return best
     }
 
     private fun pickTarget(bot: Bot): Player? {
