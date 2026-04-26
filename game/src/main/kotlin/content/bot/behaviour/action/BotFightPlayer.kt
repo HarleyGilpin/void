@@ -19,6 +19,7 @@ import world.gregs.voidps.engine.entity.character.player.Players
 import world.gregs.voidps.engine.entity.character.player.skill.Skill
 import world.gregs.voidps.engine.entity.item.floor.FloorItem
 import world.gregs.voidps.engine.entity.item.floor.FloorItems
+import world.gregs.voidps.engine.inv.Inventory
 import world.gregs.voidps.engine.inv.inventory
 import world.gregs.voidps.engine.map.Spiral
 import world.gregs.voidps.network.client.instruction.InteractFloorItem
@@ -102,6 +103,8 @@ data class BotFightPlayer(
                 player.stop("loot_pending")
                 return BehaviourState.Running
             }
+            // Inventory has no room or no eligible piles remain; abandon the loot window.
+            player.stop("loot_pending")
         }
         if (attackOption == -1) {
             return handleNoTarget()
@@ -119,6 +122,9 @@ data class BotFightPlayer(
     }
 
     private fun pickLoot(player: Player): FloorItem? {
+        val inventory = player.inventory
+        // Reserve one slot for weapon / spec switches.
+        val full = inventory.count >= inventory.size - 1
         var best: FloorItem? = null
         var bestScore = Long.MIN_VALUE
         for (tile in Spiral.spiral(player.tile, radius)) {
@@ -130,6 +136,9 @@ data class BotFightPlayer(
                     continue
                 }
                 if (!lootStrategy.accepts(item)) {
+                    continue
+                }
+                if (full && !fitsInExistingStack(item, inventory)) {
                     continue
                 }
                 if (!lootStrategy.ranks()) {
@@ -144,6 +153,9 @@ data class BotFightPlayer(
         }
         return best
     }
+
+    private fun fitsInExistingStack(item: FloorItem, inventory: Inventory): Boolean =
+        inventory.stackable(item.id) && inventory.contains(item.id)
 
     private fun pickTarget(bot: Bot): Player? {
         val context = bot.combatContext
