@@ -2,6 +2,8 @@ package content.bot.behaviour.action
 
 import content.bot.behaviour.condition.Condition
 import content.bot.behaviour.utility.UtilityCurveParser
+import net.pearx.kasechange.toPascalCase
+import world.gregs.voidps.engine.entity.character.player.skill.Skill
 
 sealed class ActionParser {
     open val required = emptySet<String>()
@@ -45,7 +47,7 @@ sealed class ActionParser {
 
     object InteractPlayerParser : ActionParser() {
         override val required = setOf("option")
-        override val optional = setOf("delay", "success", "radius", "heal_percent", "loot_over_value", "target_score", "area")
+        override val optional = setOf("delay", "success", "radius", "heal_percent", "loot_over_value", "loot_strategy", "target_score", "area")
 
         @Suppress("UNCHECKED_CAST")
         override fun parse(map: Map<String, Any>): BotAction {
@@ -56,10 +58,11 @@ sealed class ActionParser {
             val radius = map["radius"] as? Int ?: 10
             val healPercent = map["heal_percent"] as? Int ?: 20
             val lootOverValue = map["loot_over_value"] as? Int ?: 0
+            val lootStrategy = BotLootStrategy.of(map["loot_strategy"] as? String)
             val rawScore = map["target_score"] as? List<Map<String, Any>>
             val scorer = rawScore?.let { UtilityCurveParser.parseScorer(it) }
             val area = map["area"] as? String
-            return BotFightPlayer(delay, success, radius, healPercent, lootOverValue, scorer, area)
+            return BotFightPlayer(delay, success, radius, healPercent, lootOverValue, lootStrategy, scorer, area)
         }
     }
 
@@ -85,6 +88,24 @@ sealed class ActionParser {
             val condition = requirement(map, "if").singleOrNull()
             return BotSpecAttack(weapon, fallback, minEnergy, condition)
         }
+    }
+
+    object DrinkPotionParser : ActionParser() {
+        override val required = setOf("item", "skill")
+        override val optional = setOf("if")
+
+        override fun parse(map: Map<String, Any>): BotAction {
+            val item = map["item"] as String
+            val skillName = map["skill"] as String
+            val skill = Skill.of(skillName.toPascalCase())
+                ?: error("Unknown skill '$skillName' in drink_potion action.")
+            val condition = requirement(map, "if").singleOrNull()
+            return BotDrinkPotion(item, skill, condition)
+        }
+    }
+
+    object CastVengeanceParser : ActionParser() {
+        override fun parse(map: Map<String, Any>): BotAction = BotCastVengeance
     }
 
     object CastSpellParser : ActionParser() {
@@ -120,6 +141,18 @@ sealed class ActionParser {
         }
     }
 
+    object SwitchLoadoutParser : ActionParser() {
+        override val optional = setOf("to", "counter_attacker", "if")
+
+        override fun parse(map: Map<String, Any>): BotAction {
+            val to = map["to"] as? String
+            val counterAttacker = map["counter_attacker"] as? Boolean ?: false
+            require(to != null || counterAttacker) { "switch_loadout: must set 'to' or 'counter_attacker' in $map" }
+            val condition = requirement(map, "if").singleOrNull()
+            return BotSwitchLoadout(to, counterAttacker, condition)
+        }
+    }
+
     object RepositionParser : ActionParser() {
         override val optional = setOf("radius", "if")
 
@@ -144,13 +177,27 @@ sealed class ActionParser {
 
     object InterfaceParser : ActionParser() {
         override val required = setOf("option", "id")
-        override val optional = setOf("success")
+        override val optional = setOf("success", "if")
 
         override fun parse(map: Map<String, Any>): BotAction {
             val option = map["option"] as String
             val id = map["id"] as String
             val success = requirement(map, "success").singleOrNull()
-            return BotInterfaceOption(option, id, success)
+            val condition = requirement(map, "if").singleOrNull()
+            return BotInterfaceOption(option, id, success, condition)
+        }
+    }
+
+    object JewelleryTeleportParser : ActionParser() {
+        override val required = setOf("item", "area")
+        override val optional = setOf("if", "success")
+
+        override fun parse(map: Map<String, Any>): BotAction {
+            val item = map["item"] as String
+            val area = map["area"] as String
+            val condition = requirement(map, "if").singleOrNull()
+            val success = requirement(map, "success").singleOrNull()
+            return BotJewelleryTeleport(item, area, condition, success)
         }
     }
 
@@ -208,7 +255,7 @@ sealed class ActionParser {
 
     object InteractObjectParser : ActionParser() {
         override val required = setOf("option", "id", "success")
-        override val optional = setOf("delay", "radius", "x", "y")
+        override val optional = setOf("delay", "radius", "x", "y", "if")
 
         override fun parse(map: Map<String, Any>): BotAction {
             val option = map["option"] as String
@@ -218,7 +265,8 @@ sealed class ActionParser {
             val radius = map["radius"] as? Int ?: 10
             val x = map["x"] as? Int
             val y = map["y"] as? Int
-            return BotInteractObject(option, id, delay, success, radius, x, y)
+            val condition = requirement(map, "if").singleOrNull()
+            return BotInteractObject(option, id, delay, success, radius, x, y, condition)
         }
     }
 
@@ -335,10 +383,14 @@ sealed class ActionParser {
             "wait" to WaitParser,
             "restart" to RestartParser,
             "interface" to InterfaceParser,
+            "jewellery_teleport" to JewelleryTeleportParser,
             "pray" to PrayParser,
             "spec_attack" to SpecAttackParser,
+            "drink_potion" to DrinkPotionParser,
+            "cast_vengeance" to CastVengeanceParser,
             "cast_spell" to CastSpellParser,
             "switch_setup" to SwitchSetupParser,
+            "switch_loadout" to SwitchLoadoutParser,
             "retreat" to RetreatParser,
             "reposition" to RepositionParser,
             "interface_close" to CloseInterfaceParser,

@@ -89,9 +89,17 @@ class BotManager(
     }
 
     override fun run() {
+        BotMetrics.beginRun()
         for (bot in bots) {
-            tick(bot)
+            if (BotMetrics.measuring) {
+                val start = System.nanoTime()
+                tick(bot)
+                BotMetrics.recordBotTick(System.nanoTime() - start)
+            } else {
+                tick(bot)
+            }
         }
+        BotMetrics.endRun(bots.size)
     }
 
     fun tick(bot: Bot) {
@@ -384,6 +392,11 @@ class BotManager(
             val pinnedSoft = bot.pinned == behaviour.id && state.reason !is Reason.Cancelled
             if (!pinnedSoft) {
                 bot.blocked.add(behaviour.id)
+            } else {
+                // start() blocked the activity when it began (line 345); fail-paths never run the
+                // matching remove from nextAction. For a pinned bot we want it to be reassignable
+                // next tick, so undo the start-time block here.
+                bot.blocked.remove(behaviour.id)
             }
             slots.release(behaviour)
         }

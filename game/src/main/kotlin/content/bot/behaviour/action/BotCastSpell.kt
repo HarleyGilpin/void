@@ -6,15 +6,13 @@ import content.bot.behaviour.BehaviourState
 import content.bot.behaviour.BotWorld
 import content.bot.behaviour.Reason
 import content.bot.behaviour.condition.Condition
+import content.area.wilderness.inMultiCombat
 import content.bot.behaviour.utility.TargetScorer
 import content.entity.combat.Target
 import content.entity.combat.dead
 import content.entity.combat.target
 import content.entity.effect.frozen
-import content.skill.magic.spell.spellBook
-import world.gregs.voidps.engine.client.ui.open
 import world.gregs.voidps.engine.data.definition.Areas
-import world.gregs.voidps.engine.data.definition.InterfaceDefinitions
 import world.gregs.voidps.engine.entity.character.mode.EmptyMode
 import world.gregs.voidps.engine.entity.character.mode.combat.CombatMovement
 import world.gregs.voidps.engine.entity.character.mode.interact.PlayerOnFloorItemInteract
@@ -40,10 +38,12 @@ data class BotCastSpell(
     val area: String? = null,
 ) : BotAction {
     override fun update(bot: Bot, world: BotWorld, frame: BehaviourFrame): BehaviourState? {
+        // Success first so a retreat-by-teleport (bot now outside `area`) can complete the
+        // activity even at low HP — otherwise eat() spins forever when food is exhausted.
+        if (success?.check(bot.player) == true) return BehaviourState.Success
         if (healPercentage > 0 && bot.levels.get(Skill.Constitution) <= bot.levels.getMax(Skill.Constitution) * healPercentage / 100) {
             return eat(bot, world)
         }
-        if (success?.check(bot.player) == true) return BehaviourState.Success
         val target = engagedTarget(bot)
         if (target != null) return handleCombat(bot, world, target)
         if (bot.mode is PlayerOnFloorItemInteract) return BehaviourState.Running
@@ -60,7 +60,7 @@ data class BotCastSpell(
 
     private fun handleCombat(bot: Bot, world: BotWorld, currentTarget: Player): BehaviourState {
         if (currentTarget.dead) return BehaviourState.Running
-        if (targetScorer != null) {
+        if (targetScorer != null && shouldRepick(bot, currentTarget)) {
             val context = bot.combatContext
             if (context != null && context.nearbyEnemies.isNotEmpty()) {
                 val best = targetScorer.pick(bot.player, context.nearbyEnemies, context)
@@ -75,6 +75,12 @@ data class BotCastSpell(
                 }
             }
         }
+        if (targetScorer == null && targetGone(bot, currentTarget)) {
+            // Target left (teleport-out etc.). Clear the stale interact so search() picks a new
+            // target when the activity loops back.
+            bot.player.mode = EmptyMode
+            return if (success == null) BehaviourState.Success else BehaviourState.Running
+        }
 
         anchorIfNeeded(bot, currentTarget)
         ensureAutocast(bot.player, chooseSpell(bot, currentTarget))
@@ -83,6 +89,21 @@ data class BotCastSpell(
         }
 
         return if (success == null) BehaviourState.Success else BehaviourState.Running
+    }
+
+    private fun shouldRepick(bot: Bot, current: Player): Boolean {
+        if (current.tile.level != bot.player.tile.level) return true
+        if (bot.player.tile.distanceTo(current.tile) > radius) return true
+        return !Target.attackable(bot.player, current, message = false)
+    }
+
+    /**
+     * Cheap, non-throwing "target obviously left" check used when no [targetScorer] is configured.
+     * See [BotFightPlayer.targetGone].
+     */
+    private fun targetGone(bot: Bot, target: Player): Boolean {
+        if (target.tile.level != bot.player.tile.level) return true
+        return bot.player.tile.distanceTo(target.tile) > radius * 2
     }
 
     private fun maybeKite(bot: Bot, world: BotWorld, target: Player) {
@@ -151,7 +172,7 @@ data class BotCastSpell(
         val context = bot.combatContext
         if (context != null) return context.enemiesByTile[tile.id] ?: emptyList()
         val player = bot.player
-        return Players.at(tile).filter { it !== player && !it.dead && Target.attackable(player, it) }
+        return Players.at(tile).filter { it !== player && !it.dead && Target.attackable(player, it, message = false) }
     }
 
     private fun handleNoTarget(): BehaviourState {
@@ -161,18 +182,18 @@ data class BotCastSpell(
     }
 
     private fun chooseSpell(bot: Bot, target: Player): String? {
-        val magic = bot.levels.get(Skill.Magic)
+        val player = bot.player
         val maxHp = bot.levels.getMax(Skill.Constitution)
         val hpFraction = if (maxHp > 0) bot.levels.get(Skill.Constitution).toDouble() / maxHp else 1.0
-        val context = bot.combatContext
-        val multi = if (context != null) {
-            var n = 0
-            for (dx in -1..1) for (dy in -1..1) {
-                n += context.enemiesByTile[target.tile.add(dx, dy).id]?.size ?: 0
-            }
-            n >= 2
-        } else false
-
+        // Re-evaluate only when target identity, frozen state, or HP bucket changes; otherwise reuse last spell.
+        val hpBucket = (hpFraction * 4).toInt().coerceIn(0, 4)
+        val targetKey = (target.index shl 3) or (hpBucket shl 1) or (if (target.frozen) 1 else 0)
+        if (player.get("autocast_choice_key", Int.MIN_VALUE) == targetKey) {
+            return player.get<String>("autocast_choice_spell")
+        }
+        val magic = bot.levels.get(Skill.Magic)
+        // Multi-target spells only matter in multi-combat zones; skip the spiral scan otherwise.
+        val multi = bot.player.inMultiCombat
         val fam = when {
             hpFraction < 0.50 && magic >= 68 -> "blood"
             !target.frozen && magic >= 58 -> "ice"
@@ -185,17 +206,10 @@ data class BotCastSpell(
             magic >= 58 -> "rush"
             else -> null
         } ?: return null
-        return "${fam}_${tier}"
+        val spell = "${fam}_${tier}"
+        player["autocast_choice_key"] = targetKey
+        player["autocast_choice_spell"] = spell
+        return spell
     }
 
-    private fun ensureAutocast(player: Player, spell: String?) {
-        if (spell == null) return
-        if (player.spellBook != "ancient_spellbook") {
-            player.open("ancient_spellbook")
-        }
-        val castId: Int = InterfaceDefinitions.getComponent("ancient_spellbook", spell)?.getOrNull("cast_id") ?: return
-        if (player.get("autocast", 0) == castId) return
-        player.set("autocast_spell", spell)
-        player.set("autocast", castId)
-    }
 }
