@@ -8,7 +8,7 @@ end_height_default = -1
 [.ice_barrage]
 end_height = 0
 
-[.bind_projectile]
+[.bind]
 gfx = "bind"
 end_height = 0
 
