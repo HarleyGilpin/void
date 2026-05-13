@@ -1,8 +1,10 @@
 package world.gregs.voidps.network
 
+import de.mkammerer.argon2.Argon2Factory
 import kotlinx.coroutines.channels.SendChannel
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mindrot.jbcrypt.BCrypt
@@ -98,6 +100,55 @@ class PasswordManagerTest {
         val newHashedPassword = passwordManager.encrypt(username, password)
 
         assertEquals(hashedPassword, newHashedPassword)
+    }
+
+    @Test
+    fun `Argon2i valid credentials is successful`() {
+        val username = "migrated"
+        val password = "password"
+        val argon2 = Argon2Factory.create(Argon2Factory.Argon2Types.ARGON2i)
+        val hashedPassword = argon2.hash(2, 65536, 1, password.toCharArray())
+        accountLoader.accountMap[username] = hashedPassword
+
+        val result = passwordManager.validate(username, password)
+
+        assertEquals(Response.SUCCESS, result)
+    }
+
+    @Test
+    fun `Argon2i wrong password is invalid`() {
+        val username = "migrated"
+        val argon2 = Argon2Factory.create(Argon2Factory.Argon2Types.ARGON2i)
+        val hashedPassword = argon2.hash(2, 65536, 1, "password".toCharArray())
+        accountLoader.accountMap[username] = hashedPassword
+
+        val result = passwordManager.validate(username, "wrongPassword")
+
+        assertEquals(Response.INVALID_CREDENTIALS, result)
+    }
+
+    @Test
+    fun `Malformed argon2 hash is invalid`() {
+        val username = "migrated"
+        accountLoader.accountMap[username] = "\$argon2i\$bogus"
+
+        val result = passwordManager.validate(username, "password")
+
+        assertEquals(Response.INVALID_CREDENTIALS, result)
+    }
+
+    @Test
+    fun `Encrypt with argon2 stored hash returns bcrypt hash`() {
+        val username = "migrated"
+        val password = "password"
+        val argon2 = Argon2Factory.create(Argon2Factory.Argon2Types.ARGON2i)
+        val argon2Hash = argon2.hash(2, 65536, 1, password.toCharArray())
+        accountLoader.accountMap[username] = argon2Hash
+
+        val newHashedPassword = passwordManager.encrypt(username, password)
+
+        assertNotEquals(argon2Hash, newHashedPassword)
+        assertTrue(newHashedPassword.startsWith("\$2"), "Expected bcrypt hash, got: $newHashedPassword")
     }
 
     private class TestAccountLoader : AccountLoader {
