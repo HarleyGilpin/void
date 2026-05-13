@@ -69,6 +69,10 @@ class PlayerAccountLoader(
                     return null
                 }
                 player = accounts.create(username, passwordHash)
+            } else if (player.passwordHash != passwordHash) {
+                logger.info { "Upgrading password hash for $username" }
+                player.passwordHash = passwordHash
+                accountDefinitions.get(username)?.passwordHash = passwordHash
             }
             logger.info { "Player $username loaded and queued for login." }
             connect(player, client, displayMode)
