@@ -12,6 +12,7 @@ logback = "1.5.18"
 inlineLogging = "1.0.6"
 mockk = "1.14.5"
 jbcrypt = "0.4"
+argon2Jvm = "2.11"
 kaseChange = "1.4.1"
 pathfinder = "4.2.1"
 exposed = "0.48.0"
@@ -48,6 +49,7 @@ logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 inline-logging = { module = "com.michael-bull.kotlin-inline-logger:kotlin-inline-logger-jvm", version.ref = "inlineLogging" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 jbcrypt = { module = "org.mindrot:jbcrypt", version.ref = "jbcrypt" }
+argon2-jvm = { module = "de.mkammerer:argon2-jvm", version.ref = "argon2Jvm" }
 kasechange = { module = "net.pearx.kasechange:kasechange", version.ref = "kaseChange" }
 rsmod-pathfinder = { module = "org.rsmod:rsmod-pathfinder", version.ref = "pathfinder" }
 exposed = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposed" }

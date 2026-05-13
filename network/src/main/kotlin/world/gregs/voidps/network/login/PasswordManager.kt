@@ -1,5 +1,6 @@
 package world.gregs.voidps.network.login
 
+import de.mkammerer.argon2.Argon2Factory
 import org.mindrot.jbcrypt.BCrypt
 import world.gregs.voidps.network.Response
 
@@ -7,6 +8,8 @@ import world.gregs.voidps.network.Response
  * Checks account credentials are valid
  */
 class PasswordManager(private val account: AccountLoader) {
+
+    private val argon2 by lazy { Argon2Factory.create(Argon2Factory.Argon2Types.ARGON2i) }
 
     fun validate(username: String, password: String): Int {
         if (username.length > 12) {
@@ -29,10 +32,17 @@ class PasswordManager(private val account: AccountLoader) {
                 // Failed to find accounts password despite account file existing (created since startup)
                 return Response.ACCOUNT_DISABLED
             }
-            if (BCrypt.checkpw(password, passwordHash)) {
+            val matches = if (passwordHash.startsWith("\$argon2")) {
+                argon2.verify(passwordHash, password.toCharArray())
+            } else {
+                BCrypt.checkpw(password, passwordHash)
+            }
+            if (matches) {
                 return Response.SUCCESS
             }
         } catch (e: IllegalArgumentException) {
+            return Response.COULD_NOT_COMPLETE_LOGIN
+        } catch (e: Exception) {
             return Response.COULD_NOT_COMPLETE_LOGIN
         }
         return Response.INVALID_CREDENTIALS
@@ -40,7 +50,7 @@ class PasswordManager(private val account: AccountLoader) {
 
     fun encrypt(username: String, password: String): String {
         val passwordHash = account.password(username)
-        if (passwordHash != null) {
+        if (passwordHash != null && !passwordHash.startsWith("\$argon2")) {
             return passwordHash
         }
         return BCrypt.hashpw(password, BCrypt.gensalt())
