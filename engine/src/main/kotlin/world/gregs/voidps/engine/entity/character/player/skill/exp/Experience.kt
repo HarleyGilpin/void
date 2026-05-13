@@ -3,6 +3,7 @@ package world.gregs.voidps.engine.entity.character.player.skill.exp
 import world.gregs.voidps.engine.data.Settings
 import world.gregs.voidps.engine.entity.character.player.Player
 import world.gregs.voidps.engine.entity.character.player.skill.Skill
+import world.gregs.voidps.engine.entity.character.player.skill.level.Interpolation
 import world.gregs.voidps.engine.entity.character.player.skill.level.Level
 import world.gregs.voidps.engine.entity.character.player.skill.Skills
 import world.gregs.voidps.engine.event.AuditLog
@@ -40,7 +41,10 @@ class Experience(
         if (experience <= 0.0) {
             return
         }
-        val actual = experience * 10 * Settings["world.experienceRate", DEFAULT_EXPERIENCE_RATE]
+        val playerLevel = level(skill, get(skill)).coerceAtMost(Level.MAX_LEVEL)
+        val modifier = Interpolation.interpolate(1.0, 5.0, playerLevel.toDouble() / Level.MAX_LEVEL)
+        val rate = Settings["world.experienceRate", DEFAULT_EXPERIENCE_RATE]
+        val actual = experience * 10 * modifier * rate
         if (blocked.contains(skill)) {
             Skills.blocked(player, skill, actual.toInt())
         } else {

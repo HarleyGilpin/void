@@ -38,7 +38,7 @@ internal class ExperienceTableTest {
     fun `Add experience`() {
         experience.add(Skill.Attack, 10.0)
         experience.add(Skill.Attack, 10.0)
-        assertEquals(20.0, experience.get(Skill.Attack))
+        assertEquals(20.8, experience.get(Skill.Attack))
     }
 
     @Test
@@ -48,7 +48,7 @@ internal class ExperienceTableTest {
         experience.player = player
         experience.add(Skill.Attack, 10.0)
         experience.add(Skill.Attack, 10.0)
-        assertEquals(200.0, experience.get(Skill.Attack))
+        assertEquals(212.0, experience.get(Skill.Attack))
         Settings.clear()
     }
 
@@ -61,8 +61,9 @@ internal class ExperienceTableTest {
     @Test
     fun `Can't add negative experience`() {
         experience.add(Skill.Attack, 10.0)
+        val afterAdd = experience.get(Skill.Attack)
         experience.add(Skill.Attack, -10.0)
-        assertEquals(10.0, experience.get(Skill.Attack))
+        assertEquals(afterAdd, experience.get(Skill.Attack))
     }
 
     @Test
@@ -76,7 +77,7 @@ internal class ExperienceTableTest {
     @Test
     fun `Experience can equal maximum`() {
         experience.add(Skill.Attack, 200.0)
-        assertEquals(200.0, experience.get(Skill.Attack))
+        assertEquals(208.0, experience.get(Skill.Attack))
     }
 
     @Test
@@ -97,7 +98,7 @@ internal class ExperienceTableTest {
         experience.addBlock(Skill.Defence)
         experience.removeBlock(Skill.Defence)
         experience.add(Skill.Defence, 100.0)
-        assertEquals(100.0, experience.get(Skill.Defence))
+        assertEquals(104.0, experience.get(Skill.Defence))
     }
 
     @Test
@@ -105,7 +106,7 @@ internal class ExperienceTableTest {
         mockkObject(Skills)
         experience.set(Skill.Attack, 100.0)
         experience.add(Skill.Attack, 10.0)
-        verify { Skills.exp(player, Skill.Attack, 1000, 1100) }
+        verify { Skills.exp(player, Skill.Attack, 1000, 1108) }
         unmockkObject(Skills)
     }
 
@@ -115,7 +116,7 @@ internal class ExperienceTableTest {
         experience.set(Skill.Attack, 100.0)
         experience.addBlock(Skill.Attack)
         experience.add(Skill.Attack, 10.0)
-        verify { Skills.blocked(player, Skill.Attack, 100) }
+        verify { Skills.blocked(player, Skill.Attack, 108) }
         unmockkObject(Skills)
     }
 
@@ -134,6 +135,6 @@ internal class ExperienceTableTest {
         every { player.experience } returns experience
         player.exp(Skill.Attack, 10.0)
         player.exp(Skill.Attack, 10.0)
-        assertEquals(20.0, experience.get(Skill.Attack))
+        assertEquals(20.8, experience.get(Skill.Attack))
     }
 }
