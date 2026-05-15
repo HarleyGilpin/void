@@ -222,6 +222,15 @@ class DatabaseStorage : Storage {
             .count() > 0
     }
 
+    override fun password(accountName: String): String? = transaction {
+        val lower = accountName.lowercase()
+        AccountsTable
+            .select(AccountsTable.passwordHash)
+            .where { LowerCase(AccountsTable.name) eq lower }
+            .singleOrNull()
+            ?.get(AccountsTable.passwordHash)
+    }
+
     override fun load(accountName: String): PlayerSave? = transaction {
         val lower = accountName.lowercase()
         val playerRow = AccountsTable
