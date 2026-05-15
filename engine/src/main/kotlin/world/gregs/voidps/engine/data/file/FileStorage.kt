@@ -304,6 +304,14 @@ class FileStorage(
 
     override fun exists(accountName: String): Boolean = directory.resolve("${accountName.lowercase()}.toml").exists()
 
+    override fun password(accountName: String): String? {
+        val file = directory.resolve("${accountName.lowercase()}.toml")
+        if (!file.exists()) {
+            return null
+        }
+        return PlayerSave.load(file).password
+    }
+
     override fun save(accounts: List<PlayerSave>) {
         for (account in accounts) {
             val file = directory.resolve("${account.name.lowercase()}.toml")
