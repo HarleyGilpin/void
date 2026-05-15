@@ -62,6 +62,11 @@ interface Storage {
     fun exists(accountName: String): Boolean
 
     /**
+     * Returns the stored password hash for an account, or null if missing.
+     */
+    fun password(accountName: String): String?
+
+    /**
      * Loads an account from the stored location
      */
     fun load(accountName: String): PlayerSave?
