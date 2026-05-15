@@ -75,6 +75,8 @@ class AccountManagerTest : KoinMock() {
 
             override fun exists(accountName: String): Boolean = false
 
+            override fun password(accountName: String): String? = null
+
             override fun load(accountName: String): PlayerSave? = null
         }
         Settings.load(mapOf("world.home.x" to "1234", "world.home.y" to "5432", "world.experienceRate" to "1.0"))
