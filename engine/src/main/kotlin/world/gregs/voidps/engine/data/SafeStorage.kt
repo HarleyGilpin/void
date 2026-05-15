@@ -173,6 +173,8 @@ class SafeStorage(
 
     override fun exists(accountName: String): Boolean = false
 
+    override fun password(accountName: String): String? = null
+
     override fun load(accountName: String): PlayerSave? = null
 
     override fun accounts(): List<PlayerSave> = emptyList()
