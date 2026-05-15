@@ -106,7 +106,7 @@ sealed class Condition(val priority: Int) {
             "skill" -> parseSkills(list)
             "skill_percent" -> parseSkillPercent(list)
             "attacker_style" -> parseAttackerStyle(list)
-            "target_armor_type" -> parseTargetArmorType(list)
+            "target_armour_type" -> parseTargetArmourType(list)
             "outmatched" -> parseOutmatched(list)
             "allies_on_tile" -> parseAlliesOnTile(list)
             "target_hp_percent" -> parseTargetHpPercent(list)
@@ -145,9 +145,9 @@ sealed class Condition(val priority: Int) {
             return BotAttackerStyle(equals)
         }
 
-        private fun parseTargetArmorType(list: List<Map<String, Any>>): Condition? {
+        private fun parseTargetArmourType(list: List<Map<String, Any>>): Condition? {
             val equals = parseEnumSet(list) ?: return null
-            return BotTargetArmorType(equals)
+            return BotTargetArmourType(equals)
         }
 
         private fun parseOutmatched(list: List<Map<String, Any>>): Condition? {

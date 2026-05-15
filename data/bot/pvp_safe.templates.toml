@@ -1,6 +1,10 @@
 # =============================================================================
-# Minigame Combat templates — how this file works
+# Clan Wars FFA — Safe-arena PvP-bot templates
 # =============================================================================
+#
+# Worked example below: see pvp_zerker for the fully-annotated template that
+# documents the template vocabulary. Dangerous-arena variants live in
+# data/bot/pvp_dangerous.templates.toml.
 #
 # Each [section] below is a TEMPLATE. Templates are blueprints, not running
 # activities. They get instantiated by entries in *.bots.toml (e.g.
@@ -129,16 +133,16 @@ actions = [
     { interface = { option = "Select", id = "combat_styles:$style" } },
 
     # The long-running engagement loop — BotFightPlayer. Picks a target via
-    # spiral search within `radius`, attacks, eats when HP <= heal_percent
-    # of max, loots own kills (loot_strategy = survival prefers consumables).
+    # spiral search within `radius`, attacks, loots own kills (loot_strategy
+    # = survival prefers consumables). Eating is handled by the `eat`
+    # reactive below, gated on a `skill_percent` constitution threshold.
     # `success` here is what flips this action to Success early — the
     # bot leaving `$area` (retreat or teleport-out) ends the fight cleanly
     # so the next action (`restart`) can decide whether to loop.
-    { player = {
+    { player_combat = {
         option        = "Attack",
         radius        = 10,
         delay         = 1,
-        heal_percent  = 40,
         loot_strategy = "survival",
         area          = "$area",
         success       = { area = { id = "$area", present = false } },
@@ -156,6 +160,7 @@ actions = [
 # (any potion drink) or otherwise blocks subsequent reactives, later entries
 # no-op for that tick.
 reactive = [
+    { eat = { if = { skill_percent = { id = "constitution", max_percent = 40 } } } },
     # Overhead prayer: matches the most recent attacker's style. attacker_style
     # reads the same source as the `Player.attackerStyle` debug. These three
     # rows are mutually exclusive — only one matches per tick.
@@ -243,10 +248,12 @@ setup = [
 ]
 actions = [
     { interface = { option = "Select", id = "combat_styles:$style" } },
-    { player = { option = "Attack", radius = 10, delay = 1, heal_percent = 25, loot_strategy = "survival", area = "$area", success = { area = { id = "$area", present = false } } } },
+    { player_combat = { option = "Attack", radius = 10, delay = 1, loot_strategy = "survival", area = "$area", success = { area = { id = "$area", present = false } } } },
     { restart = { success = { area = { id = "$area", present = false } } } },
 ]
 reactive = [
+    # Dharok intentionally eats later to keep the low-HP damage scaling.
+    { eat = { if = { skill_percent = { id = "constitution", max_percent = 25 } } } },
     { pray = { id = "berserker", if = { area = { id = "$area" } } } },
     { pray = { id = "soul_split", if = { area = { id = "$area" } } } },
     { pray = { id = "turmoil", if = { area = { id = "$area" } } } },
@@ -287,10 +294,11 @@ setup = [
 ]
 actions = [
     { interface = { option = "Select", id = "combat_styles:$style" } },
-    { player = { option = "Attack", radius = 10, delay = 1, heal_percent = 40, loot_strategy = "survival", area = "$area", success = { area = { id = "$area", present = false } } } },
+    { player_combat = { option = "Attack", radius = 10, delay = 1, loot_strategy = "survival", area = "$area", success = { area = { id = "$area", present = false } } } },
     { restart = { success = { area = { id = "$area", present = false } } } },
 ]
 reactive = [
+    { eat = { if = { skill_percent = { id = "constitution", max_percent = 40 } } } },
     { pray = { id = "deflect_melee", if = { attacker_style = { equals = "melee" } } } },
     { pray = { id = "deflect_missiles", if = { attacker_style = { equals = "ranged" } } } },
     { pray = { id = "deflect_magic", if = { attacker_style = { equals = "magic" } } } },
@@ -330,10 +338,11 @@ setup = [
     { area = { id = "$area" } },
 ]
 actions = [
-    { player = { option = "Attack", radius = 10, delay = 1, heal_percent = 40, loot_strategy = "survival", area = "$area", success = { area = { id = "$area", present = false } } } },
+    { player_combat = { option = "Attack", radius = 10, delay = 1, loot_strategy = "survival", area = "$area", success = { area = { id = "$area", present = false } } } },
     { restart = { success = { area = { id = "$area", present = false } } } },
 ]
 reactive = [
+    { eat = { if = { skill_percent = { id = "constitution", max_percent = 40 } } } },
     { spec_attack = { weapon = "granite_maul", fallback = "tzhaar_ket_om", min_energy = 500, if = { target_hp_percent = { max = 0.35 } } } },
     # Boost only at fight start or pre-spec; obby_pure has no super_restore so no safety-net.
     { drink_potion = { item = "super_strength_*", skill = "strength", if = { any = [{ clock = { id = "fight_starting" } }, { target_hp_percent = { max = 0.35 } }] } } },
@@ -363,10 +372,11 @@ setup = [
 ]
 actions = [
     { interface = { option = "Select", id = "combat_styles:$style" } },
-    { player = { option = "Attack", radius = 12, delay = 1, heal_percent = 40, loot_strategy = "survival", area = "$area", success = { area = { id = "$area", present = false } } } },
+    { player_combat = { option = "Attack", radius = 12, delay = 1, loot_strategy = "survival", area = "$area", success = { area = { id = "$area", present = false } } } },
     { restart = { success = { area = { id = "$area", present = false } } } },
 ]
 reactive = [
+    { eat = { if = { skill_percent = { id = "constitution", max_percent = 40 } } } },
     { pray = { id = "deflect_melee", if = { attacker_style = { equals = "melee" } } } },
     { pray = { id = "deflect_missiles", if = { attacker_style = { equals = "ranged" } } } },
     { pray = { id = "deflect_magic", if = { attacker_style = { equals = "magic" } } } },
@@ -404,10 +414,11 @@ setup = [
 ]
 actions = [
     { interface = { option = "Select", id = "combat_styles:$style" } },
-    { player = { option = "Attack", radius = 12, delay = 1, heal_percent = 40, loot_strategy = "survival", area = "$area", success = { area = { id = "$area", present = false } } } },
+    { player_combat = { option = "Attack", radius = 12, delay = 1, loot_strategy = "survival", area = "$area", success = { area = { id = "$area", present = false } } } },
     { restart = { success = { area = { id = "$area", present = false } } } },
 ]
 reactive = [
+    { eat = { if = { skill_percent = { id = "constitution", max_percent = 40 } } } },
     { pray = { id = "deflect_melee", if = { attacker_style = { equals = "melee" } } } },
     { pray = { id = "deflect_missiles", if = { attacker_style = { equals = "ranged" } } } },
     { pray = { id = "deflect_magic", if = { attacker_style = { equals = "magic" } } } },
@@ -449,10 +460,11 @@ setup = [
     { area = { id = "$area" } },
 ]
 actions = [
-    { cast_spell = { family = "ice", radius = 12, delay = 1, heal_percent = 40, kite = true, area = "$area", success = { area = { id = "$area", present = false } } } },
+    { cast_spell = { family = "ice", radius = 12, delay = 1, kite = true, area = "$area", success = { area = { id = "$area", present = false } } } },
     { restart = { success = { area = { id = "$area", present = false } } } },
 ]
 reactive = [
+    { eat = { if = { skill_percent = { id = "constitution", max_percent = 40 } } } },
     { pray = { id = "deflect_melee", if = { attacker_style = { equals = "melee" } } } },
     { pray = { id = "deflect_missiles", if = { attacker_style = { equals = "ranged" } } } },
     { pray = { id = "deflect_magic", if = { attacker_style = { equals = "magic" } } } },
@@ -502,10 +514,11 @@ setup = [
     { area = { id = "$area" } },
 ]
 actions = [
-    { cast_spell = { family = "ice", radius = 12, delay = 1, heal_percent = 40, kite = true, area = "$area", success = { area = { id = "$area", present = false } } } },
+    { cast_spell = { family = "ice", radius = 12, delay = 1, kite = true, area = "$area", success = { area = { id = "$area", present = false } } } },
     { restart = { success = { area = { id = "$area", present = false } } } },
 ]
 reactive = [
+    { eat = { if = { skill_percent = { id = "constitution", max_percent = 40 } } } },
     { pray = { id = "deflect_melee", if = { attacker_style = { equals = "melee" } } } },
     { pray = { id = "deflect_missiles", if = { attacker_style = { equals = "ranged" } } } },
     { pray = { id = "deflect_magic", if = { attacker_style = { equals = "magic" } } } },
@@ -526,203 +539,6 @@ produces = [
     { skill = "attack" },
     { skill = "strength" },
     { skill = "ranged" },
-    { skill = "defence" },
-    { skill = "constitution" },
-    { skill = "prayer" },
-]
-
-# Dangerous-arena Clan Wars Templates
-
-[pvp_dangerous_melee]
-requires = [
-    { skill = { id = "attack", min = 60 } },
-    { skill = { id = "strength", min = 70 } },
-    { skill = { id = "defence", min = 40 } },
-    { skill = { id = "constitution", min = 70 } },
-    { skill = { id = "prayer", min = 95 } },
-    { skill = { id = "magic", min = 94 } },
-]
-setup = [
-    { equipment = { weapon = { id = "abyssal_whip" }, chest = { id = "fighter_torso" }, legs = { id = "rune_platelegs" }, hat = { id = "helm_of_neitiznot" }, feet = { id = "dragon_boots" }, amulet = { id = "amulet_of_glory_4" }, cape = { id = "obsidian_cape" } } },
-    { inventory = [
-        { id = "shark", min = 13 },
-        { id = "super_restore_4", min = 2 },
-        { id = "super_attack_4", min = 1 },
-        { id = "super_strength_4", min = 1 },
-        { id = "super_defence_4", min = 1 },
-        { id = "death_rune", min = 400 },
-        { id = "astral_rune", min = 400 },
-        { id = "earth_rune", min = 400 },
-        { id = "dragon_dagger_p++", min = 1, equippable = true },
-        { id = "games_necklace_6", min = 1, equippable = true },
-    ] },
-    { area = { id = "$area" } },
-]
-actions = [
-    { interface = { option = "Select", id = "combat_styles:$style" } },
-    { player = { option = "Attack", radius = 10, delay = 1, heal_percent = 40, loot_strategy = "survival", area = "$area", success = { area = { id = "$area", present = false } } } },
-    { restart = { success = { area = { id = "$area", present = false } } } },
-]
-reactive = [
-    { pray = { id = "deflect_melee", if = { attacker_style = { equals = "melee" } } } },
-    { pray = { id = "deflect_missiles", if = { attacker_style = { equals = "ranged" } } } },
-    { pray = { id = "deflect_magic", if = { attacker_style = { equals = "magic" } } } },
-    { pray = { id = "berserker", if = { area = { id = "$area" } } } },
-    { pray = { id = "turmoil", if = { area = { id = "$area" } } } },
-    { spec_attack = { weapon = "dragon_dagger_p++", fallback = "abyssal_whip", min_energy = 250, if = { target_hp_percent = { max = 0.25 } } } },
-    # Boost potions only at fight start (fight_starting clock) or pre-spec; no decay redose.
-    { drink_potion = { item = "super_attack_*", skill = "attack", if = { clock = { id = "fight_starting" } } } },
-    { drink_potion = { item = "super_strength_*", skill = "strength", if = { any = [{ clock = { id = "fight_starting" } }, { target_hp_percent = { max = 0.25 } }] } } },
-    { drink_potion = { item = "super_defence_*", skill = "defence", if = { clock = { id = "fight_starting" } } } },
-    { drink_potion = { item = "super_restore_*", skill = "prayer" } },
-    { drink_potion = { item = "super_restore_*", skill = "strength", if = { skill_percent = { id = "strength", max_percent = 30 } } } },
-    { cast_vengeance = { } },
-]
-produces = [
-    { skill = "attack" },
-    { skill = "strength" },
-    { skill = "defence" },
-    { skill = "constitution" },
-    { skill = "prayer" },
-    { skill = "magic" },
-]
-
-[pvp_dangerous_ranged]
-requires = [
-    { skill = { id = "ranged", min = 70 } },
-    { skill = { id = "defence", min = 40 } },
-    { skill = { id = "constitution", min = 70 } },
-    { skill = { id = "prayer", min = 95 } },
-]
-setup = [
-    { equipment = { weapon = { id = "magic_shortbow" }, chest = { id = "black_dragonhide_body" }, legs = { id = "black_dragonhide_chaps" }, hat = { id = "archer_helm" }, feet = { id = "snakeskin_boots" }, hands = { id = "black_dragonhide_vambraces" }, ammo = { id = "rune_arrow", min = 10000 }, amulet = { id = "amulet_of_glory_4" }, cape = { id = "avas_accumulator" } } },
-    { inventory = [
-        { id = "shark", min = 16 },
-        { id = "super_restore_4", min = 1 },
-        { id = "super_ranging_potion_4", min = 2 },
-        { id = "rune_arrow", min = 10000 },
-        { id = "games_necklace_6", min = 1, equippable = true },
-    ] },
-    { area = { id = "$area" } },
-]
-actions = [
-    { interface = { option = "Select", id = "combat_styles:$style" } },
-    { player = { option = "Attack", radius = 12, delay = 1, heal_percent = 40, loot_strategy = "survival", area = "$area", success = { area = { id = "$area", present = false } } } },
-    { restart = { success = { area = { id = "$area", present = false } } } },
-]
-reactive = [
-    { pray = { id = "deflect_melee", if = { attacker_style = { equals = "melee" } } } },
-    { pray = { id = "deflect_missiles", if = { attacker_style = { equals = "ranged" } } } },
-    { pray = { id = "deflect_magic", if = { attacker_style = { equals = "magic" } } } },
-    { pray = { id = "berserker", if = { area = { id = "$area" } } } },
-    { pray = { id = "leech_ranged", if = { area = { id = "$area" } } } },
-    { spec_attack = { weapon = "magic_shortbow", fallback = "magic_shortbow", min_energy = 500, if = { target_hp_percent = { max = 0.25 } } } },
-    { drink_potion = { item = "super_ranging_potion_*", skill = "ranged", if = { any = [{ clock = { id = "fight_starting" } }, { target_hp_percent = { max = 0.25 } }] } } },
-    { drink_potion = { item = "super_restore_*", skill = "prayer" } },
-    { drink_potion = { item = "super_restore_*", skill = "ranged", if = { skill_percent = { id = "ranged", max_percent = 30 } } } },
-]
-produces = [
-    { skill = "ranged" },
-    { skill = "defence" },
-    { skill = "constitution" },
-    { skill = "prayer" },
-]
-
-[pvp_dangerous_hybrid]
-requires = [
-    { skill = { id = "attack", min = 75 } },
-    { skill = { id = "strength", min = 80 } },
-    { skill = { id = "ranged", min = 75 } },
-    { skill = { id = "magic", min = 94 } },
-    { skill = { id = "defence", min = 60 } },
-    { skill = { id = "constitution", min = 80 } },
-    { skill = { id = "prayer", min = 95 } },
-]
-hybrid_starting_loadout = "melee"
-hybrid_swap_cooldown = 3
-hybrid_swap_per_tick = 4
-setup = [
-    { equipment = { weapon = { id = "abyssal_whip" }, chest = { id = "fighter_torso" }, legs = { id = "rune_platelegs" }, hat = { id = "helm_of_neitiznot" }, feet = { id = "dragon_boots" }, amulet = { id = "amulet_of_glory_4" }, cape = { id = "obsidian_cape" } } },
-    { inventory = [
-        { id = "shark", min = 5 },
-        { id = "super_restore_4", min = 2 },
-        { id = "saradomin_brew_4", min = 2 },
-        { id = "games_necklace_6", min = 1, equippable = true },
-    ] },
-    { area = { id = "$area" } },
-]
-loadouts = { melee  = { equipment = { weapon = { id = "abyssal_whip" }, chest = { id = "fighter_torso" }, legs = { id = "rune_platelegs" }, hat = { id = "helm_of_neitiznot" }, feet = { id = "dragon_boots" } } },
-             magic  = { equipment = { weapon = { id = "ancient_staff" }, chest = { id = "mystic_robe_top_blue" }, legs = { id = "mystic_robe_bottom_blue" }, hat = { id = "mystic_hat_blue" }, feet = { id = "mystic_boots_blue" } },
-                        inventory = [ { id = "blood_rune", min = 2000 }, { id = "death_rune", min = 2000 }, { id = "water_rune", min = 5000 }],
-                        autocast = "ice_barrage" },
-            }
-
-actions = [
-    { player = { option = "Attack", radius = 10, delay = 1, heal_percent = 40, loot_strategy = "survival", area = "$area", success = { area = { id = "$area", present = false } } } },
-    { restart = { success = { area = { id = "$area", present = false } } } },
-]
-reactive = [
-    { switch_loadout = { counter_attacker = true } },
-    { pray = { id = "deflect_melee",    if = { attacker_style = { equals = "melee"  } } } },
-    { pray = { id = "deflect_missiles", if = { attacker_style = { equals = "ranged" } } } },
-    { pray = { id = "deflect_magic",    if = { attacker_style = { equals = "magic"  } } } },
-    { pray = { id = "berserker", if = { area = { id = "$area" } } } },
-    { pray = { id = "leech_strength", if = { area = { id = "$area" } } } },
-    { drink_potion = { item = "super_restore_*", skill = "prayer" } },
-    # Brew→food chain: food eaten this/last tick → drink brew next, stacking the overheal.
-    { drink_potion = { item = "saradomin_brew_*", skill = "constitution", if = { clock = { id = "just_ate_food" } } } },
-    # Restore on 3 brew doses OR strength dipped below 30% max.
-    { drink_potion = { item = "super_restore_*", skill = "strength", if = { any = [{ variable = { id = "brew_doses_since_restore", default = 0, min = 3 } }, { skill_percent = { id = "strength", max_percent = 30 } }] } } },
-]
-produces = [
-    { skill = "attack" },
-    { skill = "strength" },
-    { skill = "ranged" },
-    { skill = "magic" },
-    { skill = "defence" },
-    { skill = "constitution" },
-    { skill = "prayer" },
-]
-
-[pvp_dangerous_magic]
-requires = [
-    { skill = { id = "magic", min = 94 } },
-    { skill = { id = "defence", min = 40 } },
-    { skill = { id = "constitution", min = 70 } },
-    { skill = { id = "prayer", min = 95 } },
-]
-setup = [
-    { equipment = { weapon = { id = "ancient_staff" }, shield = { id = "zamoraks_book_of_chaos" }, chest = { id = "mystic_robe_top_blue" }, legs = { id = "mystic_robe_bottom_blue" }, hat = { id = "mystic_hat_blue" }, feet = { id = "mystic_boots_blue" }, hands = { id = "mystic_gloves_blue" }, amulet = { id = "amulet_of_glory_4" }, cape = { id = "saradomin_cape" } } },
-    { inventory = [
-        { id = "shark", min = 14 },
-        { id = "super_restore_4", min = 2 },
-        { id = "super_magic_potion_4", min = 2 },
-        { id = "blood_rune", min = 2500 },
-        { id = "death_rune", min = 2500 },
-        { id = "water_rune", min = 10000 },
-        { id = "chaos_rune", min = 2500 },
-        { id = "air_rune", min = 10000 },
-        { id = "games_necklace_6", min = 1, equippable = true },
-    ] },
-    { area = { id = "$area" } },
-]
-actions = [
-    { cast_spell = { family = "ice", radius = 12, delay = 1, heal_percent = 40, kite = true, area = "$area", success = { area = { id = "$area", present = false } } } },
-    { restart = { success = { area = { id = "$area", present = false } } } },
-]
-reactive = [
-    { pray = { id = "deflect_melee", if = { attacker_style = { equals = "melee" } } } },
-    { pray = { id = "deflect_missiles", if = { attacker_style = { equals = "ranged" } } } },
-    { pray = { id = "deflect_magic", if = { attacker_style = { equals = "magic" } } } },
-    { pray = { id = "berserker", if = { area = { id = "$area" } } } },
-    { pray = { id = "leech_magic", if = { area = { id = "$area" } } } },
-    # Magic boost only at fight start; pvp_dangerous_magic has no spec.
-    { drink_potion = { item = "super_magic_potion_*", skill = "magic", if = { clock = { id = "fight_starting" } } } },
-    { drink_potion = { item = "super_restore_*", skill = "prayer" } },
-    { drink_potion = { item = "super_restore_*", skill = "magic", if = { skill_percent = { id = "magic", max_percent = 30 } } } },
-]
-produces = [
-    { skill = "magic" },
     { skill = "defence" },
     { skill = "constitution" },
     { skill = "prayer" },

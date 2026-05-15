@@ -1,0 +1,35 @@
+[bot_heal_items]
+row_id = "string"
+item = "string"
+option = "string"
+heal = "int"
+
+[.shark]
+item = "shark"
+option = "Eat"
+heal = 200
+
+[.monkfish]
+item = "monkfish"
+option = "Eat"
+heal = 160
+
+[.swordfish]
+item = "swordfish"
+option = "Eat"
+heal = 140
+
+[.lobster]
+item = "lobster"
+option = "Eat"
+heal = 120
+
+[.tuna]
+item = "tuna"
+option = "Eat"
+heal = 100
+
+[.saradomin_brew]
+item = "saradomin_brew_*"
+option = "Drink"
+heal = 160

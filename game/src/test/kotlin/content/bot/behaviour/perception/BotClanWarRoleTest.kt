@@ -1,5 +1,6 @@
 package content.bot.behaviour.perception
 
+import content.bot.behaviour.BotHealItems
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -34,6 +35,7 @@ class BotClanWarRoleTest {
     @AfterEach
     fun teardown() {
         ItemDefinitions.clear()
+        BotHealItems.reset()
     }
 
     private fun setLevel(skill: Skill, level: Int) {
@@ -63,6 +65,7 @@ class BotClanWarRoleTest {
             arrayOf(ItemDefinition(stringId = "shark")),
             mapOf("shark" to 0),
         )
+        BotHealItems.setForTest(listOf(BotHealItems.Entry("shark", "Eat", 200)))
         setLevel(Skill.Prayer, 70)
         setLevel(Skill.Magic, 80)
         player["combat_style"] = "magic"

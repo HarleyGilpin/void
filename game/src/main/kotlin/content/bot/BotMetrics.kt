@@ -205,8 +205,7 @@ object BotMetrics {
         else -> "%.0fB".format(bytes)
     }
 
-    private fun ratio(num: Long, denom: Long): String =
-        if (denom <= 0) "n/a" else "%.2f".format(num.toDouble() / denom)
+    private fun ratio(num: Long, denom: Long): String = if (denom <= 0) "n/a" else "%.2f".format(num.toDouble() / denom)
 
     private fun formatStats(values: LongArray, count: Int, divisorNs: Double, decimals: Int): String {
         if (count <= 0) return "no samples"

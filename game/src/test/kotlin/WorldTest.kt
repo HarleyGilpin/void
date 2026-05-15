@@ -1,4 +1,5 @@
 import com.github.michaelbull.logging.InlineLogger
+import content.bot.combat.CombatBotContexts
 import content.entity.obj.ObjectTeleports
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
@@ -220,6 +221,10 @@ abstract class WorldTest : KoinTest {
 
         NPCDefinitions.set(npcDefinitions, npcIds)
         engineLoad(configFiles)
+        // Defend against earlier test classes that clear or replace the global VariableDefinitions:
+        // the koin binding above is lazy, so it won't repopulate the singleton after a clear/set.
+        VariableDefinitions.load(configFiles)
+        Wildcards.clear()
         Wildcards.load(Settings["storage.wildcards"])
         scripts = ContentLoader().load()
         Wildcards.clear()
@@ -272,6 +277,7 @@ abstract class WorldTest : KoinTest {
     fun afterAll() {
         saves?.deleteRecursively()
         Script.clear()
+        CombatBotContexts.clear()
         stopKoin()
     }
 
@@ -305,6 +311,8 @@ abstract class WorldTest : KoinTest {
             properties["storage.autoSave.minutes"] = 0
             properties["storage.disabled"] = true
             properties["bots.count"] = 0
+            properties["bots.combat.clan_wars_ffa_safe.count"] = 0
+            properties["bots.combat.clan_wars_ffa_dangerous.count"] = 0
             properties.remove("world.id")
             properties.remove("world.name")
             properties

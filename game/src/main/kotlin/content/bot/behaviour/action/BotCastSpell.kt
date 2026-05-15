@@ -1,12 +1,12 @@
 package content.bot.behaviour.action
 
+import content.area.wilderness.inMultiCombat
 import content.bot.Bot
 import content.bot.behaviour.BehaviourFrame
 import content.bot.behaviour.BehaviourState
 import content.bot.behaviour.BotWorld
 import content.bot.behaviour.Reason
 import content.bot.behaviour.condition.Condition
-import content.area.wilderness.inMultiCombat
 import content.bot.behaviour.utility.TargetScorer
 import content.entity.combat.Target
 import content.entity.combat.dead
@@ -21,30 +21,23 @@ import world.gregs.voidps.engine.entity.character.mode.interact.PlayerOnPlayerIn
 import world.gregs.voidps.engine.entity.character.player.Player
 import world.gregs.voidps.engine.entity.character.player.Players
 import world.gregs.voidps.engine.entity.character.player.skill.Skill
-import world.gregs.voidps.engine.inv.inventory
 import world.gregs.voidps.engine.map.Spiral
-import world.gregs.voidps.network.client.instruction.InteractInterface
 import world.gregs.voidps.network.client.instruction.InteractPlayer
 import world.gregs.voidps.network.client.instruction.Walk
+import world.gregs.voidps.type.Direction
 import world.gregs.voidps.type.Tile
 
 data class BotCastSpell(
     val delay: Int = 0,
     val success: Condition? = null,
     val radius: Int = 10,
-    val healPercentage: Int = 40,
     val targetScorer: TargetScorer? = null,
     val family: String = "ice",
     val kite: Boolean = true,
     val area: String? = null,
 ) : BotAction {
     override fun update(bot: Bot, world: BotWorld, frame: BehaviourFrame): BehaviourState? {
-        // Success first so a retreat-by-teleport (bot now outside `area`) can complete the
-        // activity even at low HP — otherwise eat() spins forever when food is exhausted.
         if (success?.check(bot.player) == true) return BehaviourState.Success
-        if (healPercentage > 0 && bot.levels.get(Skill.Constitution) <= bot.levels.getMax(Skill.Constitution) * healPercentage / 100) {
-            return eat(bot, world)
-        }
         val target = engagedTarget(bot)
         if (target != null) return handleCombat(bot, world, target)
         if (bot.mode is PlayerOnFloorItemInteract) return BehaviourState.Running
@@ -111,16 +104,13 @@ data class BotCastSpell(
     private fun maybeKite(bot: Bot, world: BotWorld, target: Player) {
         if (!kite || !target.frozen) return
         if (bot.tile.distanceTo(target.tile) > 2) return
-        val dx = (bot.tile.x - target.tile.x).coerceIn(-1, 1)
-        val dy = (bot.tile.y - target.tile.y).coerceIn(-1, 1)
-        if (dx == 0 && dy == 0) return
-        val kx = bot.tile.x + dx * 2
-        val ky = bot.tile.y + dy * 2
-        val dest = Tile(kx, ky, bot.tile.level)
+        val direction = bot.tile.delta(target.tile).toDirection()
+        if (direction == Direction.NONE) return
+        val dest = bot.tile.add(direction).add(direction)
         val anchor = bot.player.get<Tile>("bot_kite_anchor")
         if (anchor != null && dest.distanceTo(anchor) > 5) return
         if (area != null && dest !in Areas[area]) return
-        world.execute(bot.player, Walk(kx, ky))
+        world.execute(bot.player, Walk(dest.x, dest.y))
     }
 
     private fun anchorIfNeeded(bot: Bot, target: Player) {
@@ -128,19 +118,6 @@ data class BotCastSpell(
         if (current == target.index) return
         bot.player["bot_kite_anchor"] = bot.tile
         bot.player["bot_kite_anchor_target"] = target.index
-    }
-
-    private fun eat(bot: Bot, world: BotWorld): BehaviourState {
-        val inventory = bot.player.inventory
-        for (index in inventory.indices) {
-            val item = inventory[index]
-            val option = item.def.options.indexOf("Eat")
-            if (option == -1) continue
-            val valid = world.execute(bot.player, InteractInterface(149, 0, item.def.id, index, option))
-            if (!valid) return BehaviourState.Failed(Reason.Invalid("Invalid inventory interaction: ${item.def.id} $index $option"))
-            return BehaviourState.Wait(1, BehaviourState.Running)
-        }
-        return BehaviourState.Running
     }
 
     private fun search(bot: Bot, world: BotWorld): BehaviourState {
@@ -211,10 +188,9 @@ data class BotCastSpell(
             magic >= 58 -> "rush"
             else -> null
         } ?: return null
-        val spell = "${fam}_${tier}"
+        val spell = "${fam}_$tier"
         player["autocast_choice_key"] = targetKey
         player["autocast_choice_spell"] = spell
         return spell
     }
-
 }

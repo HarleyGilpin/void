@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import world.gregs.voidps.cache.config.data.InventoryDefinition
 import world.gregs.voidps.cache.definition.data.ItemDefinition
 import world.gregs.voidps.cache.definition.data.NPCDefinition
 import world.gregs.voidps.engine.client.variable.start
@@ -21,16 +20,10 @@ import world.gregs.voidps.engine.data.definition.NPCDefinitions
 import world.gregs.voidps.engine.entity.character.mode.interact.PlayerOnNPCInteract
 import world.gregs.voidps.engine.entity.character.npc.NPCs
 import world.gregs.voidps.engine.entity.character.player.Player
-import world.gregs.voidps.engine.entity.character.player.skill.Skill
-import world.gregs.voidps.engine.entity.character.player.skill.level.Level
 import world.gregs.voidps.engine.entity.character.player.skill.level.PlayerLevels
 import world.gregs.voidps.engine.entity.item.floor.FloorItems
 import world.gregs.voidps.engine.inv.add
-import world.gregs.voidps.engine.inv.inventory
-import world.gregs.voidps.engine.inv.restrict.ValidItemRestriction
-import world.gregs.voidps.engine.inv.stack.ItemDependentStack
 import world.gregs.voidps.network.client.instruction.InteractFloorItem
-import world.gregs.voidps.network.client.instruction.InteractInterface
 import world.gregs.voidps.network.client.instruction.InteractNPC
 
 class BotFightNpcTest {
@@ -46,61 +39,6 @@ class BotFightNpcTest {
         bot = Bot(player)
         player.experience.player = player
         player.levels.link(player, PlayerLevels(player.experience))
-    }
-
-    @Test
-    fun `Low hp triggers eat and returns wait`() {
-        player.inventories.validItemRule = ValidItemRestriction()
-        player.inventories.player = player
-        player.inventories.normalStack = ItemDependentStack
-        player.inventories.inventory(InventoryDefinition(stringId = "inventory", length = 2))
-        player.levels.set(Skill.Constitution, 5)
-        player.experience.set(Skill.Constitution, Level.experience(Skill.Constitution, 100))
-
-        ItemDefinitions.set(
-            arrayOf(ItemDefinition(id = 100, options = arrayOf("Eat"))),
-            mapOf("fish" to 0),
-        )
-        player.inventory.add("fish")
-
-        var called = false
-        val world = FakeWorld(
-            execute = { _, instruction ->
-                called = instruction is InteractInterface
-                true
-            },
-        )
-
-        val action = BotFightNpc(id = "cow")
-
-        val state = action.update(bot, world, BehaviourFrame(FakeBehaviour()))
-
-        assertTrue(called)
-        assertEquals(BehaviourState.Wait(1, BehaviourState.Running), state)
-    }
-
-    @Test
-    fun `Eat fails if execution invalid`() {
-        player.inventories.validItemRule = ValidItemRestriction()
-        player.inventories.player = player
-        player.inventories.normalStack = ItemDependentStack
-        player.inventories.inventory(InventoryDefinition(stringId = "inventory", length = 2))
-        player.levels.set(Skill.Constitution, 5)
-        player.experience.set(Skill.Constitution, Level.experience(Skill.Constitution, 100))
-
-        ItemDefinitions.set(
-            arrayOf(ItemDefinition(id = 100, options = arrayOf("Eat"))),
-            mapOf("fish" to 0),
-        )
-        player.inventory.add("fish")
-
-        val world = FakeWorld(execute = { _, _ -> false })
-
-        val action = BotFightNpc(id = "cow")
-
-        val state = action.update(bot, world, BehaviourFrame(FakeBehaviour()))
-
-        assertTrue(state is BehaviourState.Failed)
     }
 
     @Test

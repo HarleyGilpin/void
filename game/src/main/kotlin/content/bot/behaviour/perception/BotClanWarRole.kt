@@ -1,8 +1,10 @@
 package content.bot.behaviour.perception
 
+import content.bot.behaviour.BotHealItems
 import content.skill.melee.weapon.combatStyle
 import world.gregs.voidps.engine.entity.character.player.Player
 import world.gregs.voidps.engine.entity.character.player.skill.Skill
+import world.gregs.voidps.engine.event.wildcardEquals
 import world.gregs.voidps.engine.inv.inventory
 
 enum class BotClanWarRole {
@@ -46,12 +48,14 @@ enum class BotClanWarRole {
         }
 
         private fun healingItems(player: Player): Int {
+            val entries = BotHealItems.entries()
+            if (entries.isEmpty()) return 0
             val inv = player.inventory
             var count = 0
             for (index in inv.indices) {
                 val item = inv[index]
-                val id = item.def.stringId
-                if (id == "shark" || id.startsWith("saradomin_brew_")) {
+                if (item.isEmpty()) continue
+                if (entries.any { wildcardEquals(it.pattern, item.id) }) {
                     count += item.amount
                 }
             }

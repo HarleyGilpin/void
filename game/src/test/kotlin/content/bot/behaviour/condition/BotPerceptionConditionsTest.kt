@@ -111,7 +111,7 @@ class BotPerceptionConditionsTest {
     }
 
     @Test
-    fun `TargetArmorType reads material from incoming attacker`() {
+    fun `TargetArmourType reads material from incoming attacker`() {
         ItemDefinitions.set(
             arrayOf(ItemDefinition(stringId = "rune_platebody", params = mapOf(Params.MATERIAL to "metal"))),
             mapOf("rune_platebody" to 0),
@@ -124,15 +124,15 @@ class BotPerceptionConditionsTest {
         target.equipment.set(EquipSlot.Chest.index, "rune_platebody")
         setContext(incomingAttacker = target)
 
-        assertTrue(BotTargetArmorType(setOf("metal")).check(player))
-        assertFalse(BotTargetArmorType(setOf("leather")).check(player))
+        assertTrue(BotTargetArmourType(setOf("metal")).check(player))
+        assertFalse(BotTargetArmourType(setOf("leather")).check(player))
     }
 
     @Test
-    fun `TargetArmorType returns none when no target`() {
+    fun `TargetArmourType returns none when no target`() {
         setContext()
-        assertTrue(BotTargetArmorType(setOf("none")).check(player))
-        assertFalse(BotTargetArmorType(setOf("metal")).check(player))
+        assertTrue(BotTargetArmourType(setOf("none")).check(player))
+        assertFalse(BotTargetArmourType(setOf("metal")).check(player))
     }
 
     @Test

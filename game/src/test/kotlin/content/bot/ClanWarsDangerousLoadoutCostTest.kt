@@ -12,18 +12,20 @@ class ClanWarsDangerousLoadoutCostTest : WorldTest() {
     @Test
     fun `Dangerous Clan Wars FFA bots carry no item with cache cost above 1M`() {
         val templateItems = mutableMapOf<String, Set<String>>()
-        Config.fileReader(TEMPLATES_PATH) {
-            while (nextSection()) {
-                val id = section()
-                val items = mutableSetOf<String>()
-                while (nextPair()) {
-                    when (key()) {
-                        "setup" -> collectItems(value(), items)
-                        "loadouts" -> collectLoadoutItems(value(), items)
-                        else -> value()
+        for (path in TEMPLATE_PATHS) {
+            Config.fileReader(path) {
+                while (nextSection()) {
+                    val id = section()
+                    val items = mutableSetOf<String>()
+                    while (nextPair()) {
+                        when (key()) {
+                            "setup" -> collectItems(value(), items)
+                            "loadouts" -> collectLoadoutItems(value(), items)
+                            else -> value()
+                        }
                     }
+                    templateItems[id] = items
                 }
-                templateItems[id] = items
             }
         }
 
@@ -111,7 +113,10 @@ class ClanWarsDangerousLoadoutCostTest : WorldTest() {
 
     companion object {
         private const val MAX_COST = 1_000_000
-        private const val TEMPLATES_PATH = "../data/bot/minigame_combat.templates.toml"
+        private val TEMPLATE_PATHS = listOf(
+            "../data/bot/pvp_safe.templates.toml",
+            "../data/bot/pvp_dangerous.templates.toml",
+        )
         private const val BOTS_PATH = "../data/minigame/clan_wars/clan_wars.bots.toml"
     }
 }

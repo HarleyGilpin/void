@@ -137,6 +137,10 @@ object Tables {
 
     fun stringListOrNull(path: String): List<String>? = getOrNull(path, ColumnType.StringList)
 
+    fun skillList(path: String): List<Skill> = get(path, ColumnType.IntList).map { Skill.all[it] }
+
+    fun skillListOrNull(path: String): List<Skill>? = getOrNull(path, ColumnType.IntList)?.map { Skill.all[it] }
+
 
     /*
         Entity Lists

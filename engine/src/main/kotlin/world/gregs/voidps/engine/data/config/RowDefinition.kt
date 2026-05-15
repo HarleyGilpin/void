@@ -69,6 +69,10 @@ data class RowDefinition(
 
     fun stringListOrNull(column: String) = Tables.stringListOrNull("${stringId}.$column")
 
+    fun skillList(column: String) = Tables.skillList("${stringId}.$column")
+
+    fun skillListOrNull(column: String) = Tables.skillListOrNull("${stringId}.$column")
+
     fun rowList(column: String) = Tables.rowList("${stringId}.$column")
 
     fun rowListOrNull(column: String) = Tables.rowListOrNull("${stringId}.$column")

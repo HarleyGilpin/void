@@ -1,5 +1,5 @@
 [teleport_clan_wars_games_necklace]
-weight = 100
+weight = 20
 requires = [
     { equipment = { amulet = { id = "games_necklace_8" } } },
 ]
@@ -12,7 +12,7 @@ produces = [
 ]
 
 [enter_clan_wars_ffa_safe]
-weight = -10
+weight = 10
 requires = [
     { combat_level = { min = 30 } },
     { area = { id = "clan_wars_teleport" } },
@@ -27,7 +27,7 @@ produces = [
 ]
 
 [enter_clan_wars_ffa_safe_from_lobby]
-weight = -10
+weight = 10
 requires = [
     { combat_level = { min = 30 } },
     { area = { id = "clan_wars_ffa_safe_lobby" } },
@@ -40,7 +40,7 @@ produces = [
 ]
 
 [enter_clan_wars_ffa_dangerous]
-weight = -10
+weight = 10
 requires = [
     { combat_level = { min = 30 } },
     { area = { id = "clan_wars_teleport" } },
@@ -55,7 +55,7 @@ produces = [
 ]
 
 [enter_clan_wars_ffa_dangerous_from_lobby]
-weight = -10
+weight = 10
 requires = [
     { combat_level = { min = 30 } },
     { area = { id = "clan_wars_ffa_dangerous_lobby" } },

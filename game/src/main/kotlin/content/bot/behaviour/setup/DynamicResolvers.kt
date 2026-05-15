@@ -36,7 +36,9 @@ object DynamicResolvers {
     val sampleItems = mutableMapOf<String, MutableList<Pair<String, String>>>()
 
     fun resolver(player: Player, condition: Condition): Resolver? = when (condition) {
-        is BotInArea -> Resolver("go_to_area", -1, actions = listOf(BotGoTo(condition.id)))
+        // Generic pathfind fallback. Weight 100 so any explicit setup (typically 10–25) beats it,
+        // and bots only fall back to raw routing when no portal/teleport setup is registered.
+        is BotInArea -> Resolver("go_to_area", 100, actions = listOf(BotGoTo(condition.id)))
         is BotEquipmentSetup -> if (player.inPvp) null else resolveEquipment(player, condition.items)
         is BotInventorySetup -> if (player.inPvp) null else resolveInventory(player, condition.items)
         else -> null

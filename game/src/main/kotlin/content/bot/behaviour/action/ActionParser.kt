@@ -27,7 +27,7 @@ sealed class ActionParser {
 
     object InteractNpcParser : ActionParser() {
         override val required = setOf("id", "option")
-        override val optional = setOf("delay", "success", "radius", "heal_percent", "loot_over_value")
+        override val optional = setOf("delay", "success", "radius", "loot_over_value")
 
         override fun parse(map: Map<String, Any>): BotAction {
             val option = map["option"] as String
@@ -36,9 +36,8 @@ sealed class ActionParser {
             val success = requirement(map, "success").singleOrNull()
             val radius = map["radius"] as? Int ?: 10
             return if (option == "Attack") {
-                val healPercent = map["heal_percent"] as? Int ?: 20
                 val lootOverValue = map["loot_over_value"] as? Int ?: 0
-                BotFightNpc(id, delay, success, radius, healPercent, lootOverValue)
+                BotFightNpc(id, delay, success, radius, lootOverValue)
             } else {
                 BotInteractNpc(option, id, delay, success, radius)
             }
@@ -47,22 +46,21 @@ sealed class ActionParser {
 
     object InteractPlayerParser : ActionParser() {
         override val required = setOf("option")
-        override val optional = setOf("delay", "success", "radius", "heal_percent", "loot_over_value", "loot_strategy", "target_score", "area")
+        override val optional = setOf("delay", "success", "radius", "loot_over_value", "loot_strategy", "target_score", "area")
 
         @Suppress("UNCHECKED_CAST")
         override fun parse(map: Map<String, Any>): BotAction {
             val option = map["option"] as String
-            require(option == "Attack") { "Only 'Attack' option is supported for 'player' actions, got '$option'." }
+            require(option == "Attack") { "Only 'Attack' option is supported for 'player_combat' actions, got '$option'." }
             val delay = map["delay"] as? Int ?: 0
             val success = requirement(map, "success").singleOrNull()
             val radius = map["radius"] as? Int ?: 10
-            val healPercent = map["heal_percent"] as? Int ?: 20
             val lootOverValue = map["loot_over_value"] as? Int ?: 0
             val lootStrategy = BotLootStrategy.of(map["loot_strategy"] as? String)
             val rawScore = map["target_score"] as? List<Map<String, Any>>
             val scorer = rawScore?.let { UtilityCurveParser.parseScorer(it) }
             val area = map["area"] as? String
-            return BotFightPlayer(delay, success, radius, healPercent, lootOverValue, lootStrategy, scorer, area)
+            return BotFightPlayer(delay, success, radius, lootOverValue, lootStrategy, scorer, area)
         }
     }
 
@@ -109,20 +107,39 @@ sealed class ActionParser {
     }
 
     object CastSpellParser : ActionParser() {
-        override val optional = setOf("delay", "success", "radius", "heal_percent", "target_score", "family", "kite", "area")
+        override val optional = setOf("delay", "success", "radius", "target_score", "family", "kite", "area")
 
         @Suppress("UNCHECKED_CAST")
         override fun parse(map: Map<String, Any>): BotAction {
             val delay = map["delay"] as? Int ?: 0
             val success = requirement(map, "success").singleOrNull()
             val radius = map["radius"] as? Int ?: 10
-            val healPercent = map["heal_percent"] as? Int ?: 40
             val rawScore = map["target_score"] as? List<Map<String, Any>>
             val scorer = rawScore?.let { UtilityCurveParser.parseScorer(it) }
             val family = map["family"] as? String ?: "ice"
             val kite = map["kite"] as? Boolean ?: true
             val area = map["area"] as? String
-            return BotCastSpell(delay, success, radius, healPercent, scorer, family, kite, area)
+            return BotCastSpell(delay, success, radius, scorer, family, kite, area)
+        }
+    }
+
+    object EatParser : ActionParser() {
+        override val optional = setOf("if")
+
+        override fun parse(map: Map<String, Any>): BotAction {
+            val condition = requirement(map, "if").singleOrNull()
+            return BotReactiveEat(condition)
+        }
+    }
+
+    object LootParser : ActionParser() {
+        override val optional = setOf("radius", "strategy", "if")
+
+        override fun parse(map: Map<String, Any>): BotAction {
+            val radius = map["radius"] as? Int ?: 1
+            val strategy = BotLootStrategy.of(map["strategy"] as? String)
+            val condition = requirement(map, "if").singleOrNull()
+            return BotReactiveLoot(radius, strategy, condition)
         }
     }
 
@@ -373,7 +390,7 @@ sealed class ActionParser {
 
         private val parsers = mapOf(
             "npc" to InteractNpcParser,
-            "player" to InteractPlayerParser,
+            "player_combat" to InteractPlayerParser,
             "object" to InteractObjectParser,
             "floor_item" to InteractFloorItemParser,
             "item_on_object" to ItemOnObjectParser,
@@ -389,6 +406,8 @@ sealed class ActionParser {
             "drink_potion" to DrinkPotionParser,
             "cast_vengeance" to CastVengeanceParser,
             "cast_spell" to CastSpellParser,
+            "eat" to EatParser,
+            "loot" to LootParser,
             "switch_setup" to SwitchSetupParser,
             "switch_loadout" to SwitchLoadoutParser,
             "retreat" to RetreatParser,

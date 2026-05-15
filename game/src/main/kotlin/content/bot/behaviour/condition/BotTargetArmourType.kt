@@ -7,7 +7,7 @@ import world.gregs.voidps.engine.entity.character.player.Player
 import world.gregs.voidps.engine.entity.character.player.equip.equipped
 import world.gregs.voidps.network.login.protocol.visual.update.player.EquipSlot
 
-data class BotTargetArmorType(val equals: Set<String>) : Condition(1) {
+data class BotTargetArmourType(val equals: Set<String>) : Condition(1) {
     override fun keys() = emptySet<String>()
     override fun events() = emptySet<String>()
     override fun check(player: Player): Boolean {
