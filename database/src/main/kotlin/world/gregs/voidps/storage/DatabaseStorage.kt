@@ -5,7 +5,6 @@ import com.zaxxer.hikari.HikariDataSource
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
 import org.jetbrains.exposed.sql.transactions.transaction
-import world.gregs.voidps.engine.data.AbuseReport
 import world.gregs.voidps.engine.data.PlayerSave
 import world.gregs.voidps.engine.data.Storage
 import world.gregs.voidps.engine.data.config.AccountDefinition
@@ -199,6 +198,14 @@ class DatabaseStorage : Storage {
         saveInventories(accounts, playerIds)
         saveOffers(accounts, playerIds)
         saveHistories(accounts, playerIds)
+    }
+
+    override fun savePlayerCount(world: Int, count: Int): Unit = transaction {
+        PlayerCountTable.upsert(PlayerCountTable.world) {
+            it[PlayerCountTable.world] = world
+            it[PlayerCountTable.count] = count
+            it[updated] = System.currentTimeMillis()
+        }
     }
 
     override fun saveReport(report: AbuseReport): Unit = transaction {
@@ -588,7 +595,7 @@ class DatabaseStorage : Storage {
             }
         }
 
-        internal val tables = arrayOf(AccountsTable, ExperienceTable, LevelsTable, VariablesTable, InventoriesTable, OffersTable, ActiveOffersTable, PlayerHistoryTable, ClaimsTable, ItemHistoryTable, ReportsTable)
+        internal val tables = arrayOf(AccountsTable, ExperienceTable, LevelsTable, VariablesTable, InventoriesTable, OffersTable, ActiveOffersTable, PlayerHistoryTable, ClaimsTable, ItemHistoryTable, ReportsTable, PlayerCountTable)
 
         private const val TYPE_STRING = 0.toByte()
         private const val TYPE_INT = 1.toByte()
