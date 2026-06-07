@@ -205,6 +205,14 @@ class DatabaseStorage : Storage {
         saveRecentEvents(accounts, playerIds)
     }
 
+    override fun savePlayerCount(world: Int, count: Int): Unit = transaction {
+        PlayerCountTable.upsert(PlayerCountTable.world) {
+            it[PlayerCountTable.world] = world
+            it[PlayerCountTable.count] = count
+            it[updated] = System.currentTimeMillis()
+        }
+    }
+
     override fun saveReport(report: AbuseReport): Unit = transaction {
         ReportsTable.insert {
             it[reporter] = report.reporter
@@ -657,7 +665,7 @@ class DatabaseStorage : Storage {
             }
         }
 
-        internal val tables = arrayOf(AccountsTable, ExperienceTable, LevelsTable, VariablesTable, InventoriesTable, OffersTable, ActiveOffersTable, PlayerHistoryTable, ClaimsTable, ItemHistoryTable, ReportsTable, KillsTable, RecordsTable, RecentEventsTable)
+        internal val tables = arrayOf(AccountsTable, ExperienceTable, LevelsTable, VariablesTable, InventoriesTable, OffersTable, ActiveOffersTable, PlayerHistoryTable, ClaimsTable, ItemHistoryTable, ReportsTable, KillsTable, RecordsTable, RecentEventsTable, PlayerCountTable)
 
         private const val TYPE_STRING = 0.toByte()
         private const val TYPE_INT = 1.toByte()
