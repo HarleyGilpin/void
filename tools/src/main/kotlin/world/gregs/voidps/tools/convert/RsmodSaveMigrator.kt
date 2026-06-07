@@ -269,7 +269,12 @@ object RsmodSaveMigrator {
         val maxRsmodSlot = container.items.keys.mapNotNull { it.toIntOrNull() }.maxOrNull() ?: -1
         val capacity = maxOf(def.length, maxRsmodSlot + 1, 1)
         val arr = Array<Item>(capacity) { Item.EMPTY }
-        for ((slotStr, item) in container.items) {
+        // The bank must stay contiguous - the client's tab counts assume no gaps, so
+        // dropped items would hide everything after them until a deposit re-shifts.
+        // Inventory/equipment keep their original slots.
+        val compact = voidName == "bank"
+        var nextSlot = 0
+        for ((slotStr, item) in container.items.toSortedMap(compareBy { it.toIntOrNull() ?: Int.MAX_VALUE })) {
             val slot = slotStr.toIntOrNull() ?: continue
             if (slot < 0 || slot >= capacity) continue
             val stringId = itemMap.get(item.id)
@@ -277,7 +282,7 @@ object RsmodSaveMigrator {
                 dropped.addTo(item.id, 1)
                 continue
             }
-            arr[slot] = Item(stringId, item.amount)
+            arr[if (compact) nextSlot++ else slot] = Item(stringId, item.amount)
         }
         return arr
     }
