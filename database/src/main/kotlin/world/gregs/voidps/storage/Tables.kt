@@ -193,6 +193,14 @@ internal object ReportsTable : Table("abuse_reports") {
     override val primaryKey = PrimaryKey(id, name = "pk_report_id")
 }
 
+internal object PlayerCountTable : Table("player_count") {
+    val world = integer("world")
+    val count = integer("count")
+    val updated = long("updated")
+
+    override val primaryKey = PrimaryKey(world, name = "pk_player_count_world")
+}
+
 internal object ItemHistoryTable : Table("grand_exchange_item_history") {
     val item = text("item")
     val timestamp = long("timestamp")
