@@ -70,4 +70,10 @@ interface Storage {
      * Loads an account from the stored location
      */
     fun load(accountName: String): PlayerSave?
+
+    /**
+     * Stores the current online player [count] for [world], overwriting any previous value.
+     * No-op by default; database storage persists it for external consumers (e.g. the website).
+     */
+    fun savePlayerCount(world: Int, count: Int) {}
 }
