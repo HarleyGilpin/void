@@ -200,6 +200,14 @@ class DatabaseStorage : Storage {
         saveHistories(accounts, playerIds)
     }
 
+    override fun savePlayerCount(world: Int, count: Int): Unit = transaction {
+        PlayerCountTable.upsert(PlayerCountTable.world) {
+            it[PlayerCountTable.world] = world
+            it[PlayerCountTable.count] = count
+            it[updated] = System.currentTimeMillis()
+        }
+    }
+
     override fun exists(accountName: String): Boolean = transaction {
         val lower = accountName.lowercase()
         AccountsTable
@@ -574,7 +582,7 @@ class DatabaseStorage : Storage {
             }
         }
 
-        internal val tables = arrayOf(AccountsTable, ExperienceTable, LevelsTable, VariablesTable, InventoriesTable, OffersTable, ActiveOffersTable, PlayerHistoryTable, ClaimsTable, ItemHistoryTable)
+        internal val tables = arrayOf(AccountsTable, ExperienceTable, LevelsTable, VariablesTable, InventoriesTable, OffersTable, ActiveOffersTable, PlayerHistoryTable, ClaimsTable, ItemHistoryTable, PlayerCountTable)
 
         private const val TYPE_STRING = 0.toByte()
         private const val TYPE_INT = 1.toByte()
