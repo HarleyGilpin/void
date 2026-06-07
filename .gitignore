@@ -56,3 +56,5 @@ gradle-app.setting
 .gradletasknamecache
 /gradle/
 *.lock
+# Local config with credentials
+/game.properties
