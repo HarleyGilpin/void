@@ -22,6 +22,7 @@ import world.gregs.voidps.cache.secure.RSA
 import world.gregs.voidps.cache.secure.Xtea
 import world.gregs.voidps.network.client.Client
 import world.gregs.voidps.network.client.Instruction
+import world.gregs.voidps.network.client.LoginAttemptTracker
 import world.gregs.voidps.network.login.AccountLoader
 import world.gregs.voidps.network.login.PasswordManager
 import world.gregs.voidps.network.login.protocol.Decoder
@@ -39,12 +40,14 @@ internal class LoginServerTest {
     private lateinit var instructions: Channel<Instruction>
     private var client: Client? = null
     private var password: String? = null
+    private var now = 0L
 
     private data class TestInstruction(val value: Int) : Instruction
 
     @BeforeEach
     fun setup() {
         client = null
+        now = 0L
         password = "\$2a\$10${"$"}iIdTrtrJ5ibgFcJToZW7ueGkymDed2Ws2FoE8JnrXPGiY2YNVa9y6"
         instructions = Channel(capacity = 1)
         accounts = object : AccountLoader {
@@ -343,6 +346,107 @@ internal class LoginServerTest {
         }
         writeLoginPacket(readChannel)
 
+        assertEquals(Response.DATA_CHANGE, writeChannel.readByte().toInt())
+        assertEquals(Response.INVALID_CREDENTIALS, writeChannel.readByte().toInt())
+        assertTrue(writeChannel.isClosedForRead)
+    }
+
+    @Test
+    fun `Too many invalid passwords blocks ip`() = runTest {
+        server = LoginServer(protocol, 123, 10, modulus, BigInteger("10001", 16), accounts, passwordManager, LoginAttemptTracker(2, 1000) { now })
+        password = "\$2a\$10${"$"}WisAwbHvp9Gj/61o.BElqOGWECIq/Rb2xxAV1he2w9LeVzUkeP6py" // Invalid
+        repeat(2) {
+            invalidPasswordAttempt()
+        }
+        val readChannel = ByteChannel(autoFlush = true)
+        val writeChannel = ByteChannel(autoFlush = true)
+        launch {
+            server.connect(readChannel, writeChannel, "localhost")
+        }
+
+        assertEquals(Response.LOGIN_ATTEMPTS_EXCEEDED, writeChannel.readByte().toInt())
+        assertTrue(writeChannel.isClosedForRead)
+    }
+
+    @Test
+    fun `Blocked ip expires after timeout`() = runTest {
+        val validPassword = password
+        server = LoginServer(protocol, 123, 10, modulus, BigInteger("10001", 16), accounts, passwordManager, LoginAttemptTracker(2, 1000) { now })
+        password = "\$2a\$10${"$"}WisAwbHvp9Gj/61o.BElqOGWECIq/Rb2xxAV1he2w9LeVzUkeP6py" // Invalid
+        repeat(2) {
+            invalidPasswordAttempt()
+        }
+
+        now = 1000
+        password = validPassword
+        val readChannel = ByteChannel(autoFlush = true)
+        val writeChannel = ByteChannel(autoFlush = true)
+        val job = launch {
+            server.connect(readChannel, writeChannel, "localhost")
+        }
+        writeLoginPacket(readChannel)
+
+        assertEquals(Response.DATA_CHANGE, writeChannel.readByte().toInt())
+        assertEquals(118, writeChannel.readByte().toInt()) // packet 0
+        assertEquals(Response.SUCCESS, writeChannel.readByte().toInt())
+        job.cancelAndJoin()
+    }
+
+    @Test
+    fun `Successful login resets failed attempts`() = runTest {
+        val validPassword = password
+        server = LoginServer(protocol, 123, 10, modulus, BigInteger("10001", 16), accounts, passwordManager, LoginAttemptTracker(2, 1000) { now })
+        password = "\$2a\$10${"$"}WisAwbHvp9Gj/61o.BElqOGWECIq/Rb2xxAV1he2w9LeVzUkeP6py" // Invalid
+        invalidPasswordAttempt()
+
+        password = validPassword
+        val readChannel = ByteChannel(autoFlush = true)
+        val writeChannel = ByteChannel(autoFlush = true)
+        val job = launch {
+            server.connect(readChannel, writeChannel, "localhost")
+        }
+        writeLoginPacket(readChannel)
+        assertEquals(Response.DATA_CHANGE, writeChannel.readByte().toInt())
+        assertEquals(118, writeChannel.readByte().toInt()) // packet 0
+        assertEquals(Response.SUCCESS, writeChannel.readByte().toInt())
+        job.cancelAndJoin()
+
+        password = "\$2a\$10${"$"}WisAwbHvp9Gj/61o.BElqOGWECIq/Rb2xxAV1he2w9LeVzUkeP6py" // Invalid
+        invalidPasswordAttempt() // Would block if the counter hadn't reset
+        val blockedRead = ByteChannel(autoFlush = true)
+        val blockedWrite = ByteChannel(autoFlush = true)
+        val check = launch {
+            server.connect(blockedRead, blockedWrite, "localhost")
+        }
+
+        assertEquals(Response.DATA_CHANGE, blockedWrite.readByte().toInt())
+        check.cancelAndJoin()
+    }
+
+    @Test
+    fun `Failed attempts only count per ip`() = runTest {
+        server = LoginServer(protocol, 123, 10, modulus, BigInteger("10001", 16), accounts, passwordManager, LoginAttemptTracker(2, 1000) { now })
+        password = "\$2a\$10${"$"}WisAwbHvp9Gj/61o.BElqOGWECIq/Rb2xxAV1he2w9LeVzUkeP6py" // Invalid
+        repeat(2) {
+            invalidPasswordAttempt()
+        }
+        val readChannel = ByteChannel(autoFlush = true)
+        val writeChannel = ByteChannel(autoFlush = true)
+        val job = launch {
+            server.connect(readChannel, writeChannel, "127.0.0.2")
+        }
+
+        assertEquals(Response.DATA_CHANGE, writeChannel.readByte().toInt())
+        job.cancelAndJoin()
+    }
+
+    private suspend fun kotlinx.coroutines.CoroutineScope.invalidPasswordAttempt(hostname: String = "localhost") {
+        val readChannel = ByteChannel(autoFlush = true)
+        val writeChannel = ByteChannel(autoFlush = true)
+        launch {
+            server.connect(readChannel, writeChannel, hostname)
+        }
+        writeLoginPacket(readChannel)
         assertEquals(Response.DATA_CHANGE, writeChannel.readByte().toInt())
         assertEquals(Response.INVALID_CREDENTIALS, writeChannel.readByte().toInt())
         assertTrue(writeChannel.isClosedForRead)

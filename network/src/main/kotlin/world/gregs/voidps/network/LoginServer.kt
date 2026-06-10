@@ -13,6 +13,7 @@ import world.gregs.voidps.cache.secure.Xtea
 import world.gregs.voidps.network.client.Client
 import world.gregs.voidps.network.client.Instruction
 import world.gregs.voidps.network.client.IsaacCipher
+import world.gregs.voidps.network.client.LoginAttemptTracker
 import world.gregs.voidps.network.login.AccountLoader
 import world.gregs.voidps.network.login.PasswordManager
 import world.gregs.voidps.network.login.protocol.*
@@ -31,11 +32,16 @@ class LoginServer(
     private val private: BigInteger,
     private val accounts: AccountLoader,
     private val passwordManager: PasswordManager = PasswordManager(accounts),
+    private val loginAttempts: LoginAttemptTracker = LoginAttemptTracker(0, 0),
 ) : Server {
 
     internal val online: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     override suspend fun connect(read: ByteReadChannel, write: ByteWriteChannel, hostname: String) {
+        if (loginAttempts.blocked(hostname)) {
+            write.finish(Response.LOGIN_ATTEMPTS_EXCEEDED)
+            return
+        }
         write.respond(Response.DATA_CHANGE)
         val opcode = read.readByte().toInt()
         if (opcode != Request.LOGIN && opcode != Request.RECONNECT) {
@@ -88,7 +94,7 @@ class LoginServer(
         val password: String = rsa.readString()
         val xtea = decryptXtea(packet, isaacKeys)
         val username = xtea.readString()
-        if (!validate(write, username, password)) {
+        if (!validate(write, hostname, username, password)) {
             return
         }
         val client = createClient(write, isaacKeys, hostname)
@@ -101,12 +107,16 @@ class LoginServer(
         login(read, client, username, passwordHash, displayMode)
     }
 
-    suspend fun validate(write: ByteWriteChannel, username: String, password: String): Boolean {
+    suspend fun validate(write: ByteWriteChannel, hostname: String, username: String, password: String): Boolean {
         val response = passwordManager.validate(username, password)
         if (response != Response.SUCCESS) {
+            if (response == Response.INVALID_CREDENTIALS) {
+                loginAttempts.failure(hostname)
+            }
             write.finish(response)
             return false
         }
+        loginAttempts.success(hostname)
         if (username.length > 12) {
             write.finish(Response.INVALID_CREDENTIALS)
             return false
@@ -174,7 +184,9 @@ class LoginServer(
             val gamePrivate = BigInteger(properties.getProperty("security.game.private"), 16)
             val revision = properties.getProperty("server.revision").toInt()
             val maxPlayers = properties.getProperty("world.players.max").toInt()
-            return LoginServer(protocol, revision, maxPlayers, gameModulus, gamePrivate, loader)
+            val maxAttempts = properties.getProperty("network.login.maxAttempts", "0").toInt()
+            val timeoutSeconds = properties.getProperty("network.login.timeoutSeconds", "300").toLong()
+            return LoginServer(protocol, revision, maxPlayers, gameModulus, gamePrivate, loader, loginAttempts = LoginAttemptTracker(maxAttempts, timeoutSeconds * 1000))
         }
     }
 }
