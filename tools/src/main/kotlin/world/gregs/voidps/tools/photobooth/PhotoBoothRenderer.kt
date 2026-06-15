@@ -68,12 +68,12 @@ object PhotoBoothRenderer {
             println("  ✓ $name [$suffix] -> ${file.path}")
         }
 
-        fun render(snapshot: PhotoSnapshot, name: String) {
+        fun render(snapshot: PhotoSnapshot, name: String): Boolean {
             val body = assembler.assembleBody(snapshot)
             val head = assembler.assembleHead(snapshot)
             if (body == null && head == null) {
                 println("  ! $name: no renderable model (empty snapshot?)")
-                return
+                return false
             }
             // Chathead is turned to a 3/4 view (and tilted slightly) to match RS forum avatars,
             // rather than staring straight ahead. Overridable via --yaw/--pitch.
@@ -85,6 +85,7 @@ object PhotoBoothRenderer {
                 // No dedicated chathead mesh (e.g. full helm): crop the head from the body model.
                 body != null -> writePng(AvatarRenderer.renderHeadCrop(body, size, pitchDegrees = chatPitch, yawDegrees = chatYaw), "chat", name)
             }
+            return true
         }
 
         val literal = args.value("--snapshot")
@@ -94,14 +95,15 @@ object PhotoBoothRenderer {
             }
             args.value("--player") != null -> {
                 withStorage { repo ->
-                    val name = args.value("--player")!!
+                    // '+' stands in for spaces so account names survive -Pargs space-splitting.
+                    val name = args.value("--player")!!.replace('+', ' ')
                     val snapshot = repo.load(name) ?: run { println("No snapshot for $name"); return@withStorage }
                     render(snapshot, name)
                 }
             }
             args.value("--players") != null -> {
                 withStorage { repo ->
-                    args.value("--players")!!.split(",").map { it.trim() }.filter { it.isNotEmpty() }.forEach { name ->
+                    args.value("--players")!!.split(",").map { it.trim().replace('+', ' ') }.filter { it.isNotEmpty() }.forEach { name ->
                         val snapshot = repo.load(name)
                         if (snapshot == null) println("  - $name: no snapshot") else render(snapshot, name)
                     }
@@ -114,8 +116,10 @@ object PhotoBoothRenderer {
                     var rendered = 0
                     for (name in names) {
                         val snapshot = repo.loadIfDirty(name) ?: continue
-                        render(snapshot, name)
-                        rendered++
+                        if (render(snapshot, name)) {
+                            repo.clearDirty(name)
+                            rendered++
+                        }
                     }
                     println("Rendered $rendered dirty avatar(s)")
                 }
