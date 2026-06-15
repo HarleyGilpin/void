@@ -24,6 +24,15 @@ class SnapshotRepository(private val storage: Storage) {
         return fromVariables(variables)
     }
 
+    /** Clears the dirty flag after a fresh render so the next sweep skips this account. */
+    fun clearDirty(accountName: String) {
+        val save = storage.load(accountName) ?: return
+        if (save.variables["photo_booth_dirty"] != true) return
+        val variables = save.variables.toMutableMap()
+        variables.remove("photo_booth_dirty")
+        storage.save(listOf(save.copy(variables = variables)))
+    }
+
     private fun fromVariables(variables: Map<String, Any>): PhotoSnapshot? {
         val male = variables["photo_booth_male"] as? Boolean ?: return null
         val looks = variables["photo_booth_looks"] as? String ?: return null
