@@ -179,6 +179,20 @@ internal object PlayerCountTable : Table("player_count") {
     override val primaryKey = PrimaryKey(world, name = "pk_player_count_world")
 }
 
+internal object ReportsTable : Table("abuse_reports") {
+    val id = integer("id").autoIncrement().uniqueIndex()
+    val reporter = varchar("reporter", 12)
+    val reported = text("reported")
+    val rule = integer("rule")
+    val ruleName = text("rule_name")
+    val mute = bool("mute")
+    val suggestion = text("suggestion")
+    val time = integer("time")
+    val evidence = array<String>("evidence")
+
+    override val primaryKey = PrimaryKey(id, name = "pk_report_id")
+}
+
 internal object ItemHistoryTable : Table("grand_exchange_item_history") {
     val item = text("item")
     val timestamp = long("timestamp")
