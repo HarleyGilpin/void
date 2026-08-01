@@ -50,6 +50,41 @@ class PasswordManagerTest {
     }
 
     @Test
+    fun `Website 2y revision hash is successful`() {
+        val username = "test"
+        val password = "password"
+        val hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt()).replaceFirst("\$2a\$", "\$2y\$")
+        accountLoader.accountMap[username] = hashedPassword
+
+        val result = passwordManager.validate(username, password)
+
+        assertEquals(Response.SUCCESS, result)
+    }
+
+    @Test
+    fun `Website 2y revision hash with wrong password is invalid`() {
+        val username = "test"
+        val hashedPassword = BCrypt.hashpw("password", BCrypt.gensalt()).replaceFirst("\$2a\$", "\$2y\$")
+        accountLoader.accountMap[username] = hashedPassword
+
+        val result = passwordManager.validate(username, "wrongPassword")
+
+        assertEquals(Response.INVALID_CREDENTIALS, result)
+    }
+
+    @Test
+    fun `2b revision hash is successful`() {
+        val username = "test"
+        val password = "password"
+        val hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt()).replaceFirst("\$2a\$", "\$2b\$")
+        accountLoader.accountMap[username] = hashedPassword
+
+        val result = passwordManager.validate(username, password)
+
+        assertEquals(Response.SUCCESS, result)
+    }
+
+    @Test
     fun `New player with no password is successful`() {
         val username = "test"
         val password = "wrongPassword"
