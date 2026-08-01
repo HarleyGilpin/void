@@ -35,7 +35,7 @@ class PasswordManager(private val account: AccountLoader) {
             val matches = if (passwordHash.startsWith("\$argon2")) {
                 argon2.verify(passwordHash, password.toCharArray())
             } else {
-                BCrypt.checkpw(password, passwordHash)
+                BCrypt.checkpw(password, normaliseBCryptRevision(passwordHash))
             }
             if (matches) {
                 return Response.SUCCESS
@@ -46,6 +46,16 @@ class PasswordManager(private val account: AccountLoader) {
             return Response.COULD_NOT_COMPLETE_LOGIN
         }
         return Response.INVALID_CREDENTIALS
+    }
+
+    /**
+     * jBCrypt only accepts the `$2$` and `$2a$` salt revisions, but the website hashes passwords
+     * with PHP which emits `$2y$` (and other libraries `$2b$`). All three are the same algorithm,
+     * so rewrite the revision to `$2a$` rather than rejecting the login.
+     */
+    private fun normaliseBCryptRevision(passwordHash: String): String = when {
+        passwordHash.startsWith("\$2y\$") || passwordHash.startsWith("\$2b\$") -> "\$2a\$${passwordHash.substring(4)}"
+        else -> passwordHash
     }
 
     fun encrypt(username: String, password: String): String {
