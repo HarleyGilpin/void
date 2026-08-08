@@ -1,6 +1,7 @@
 package world.gregs.voidps.engine.data.definition
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.BeforeEach
@@ -113,6 +114,74 @@ class AccountDefinitionsTest {
 
         assertNull(definitions.clan("online_account"))
     }
+
+    @Test
+    fun `Accounts sharing a display name keep their own password hash`() {
+        definitions.merge(sharedDisplayName(), emptyMap()) { false }
+
+        assertEquals("one_hash", definitions.getByAccount("account_one")?.passwordHash)
+        assertEquals("two_hash", definitions.getByAccount("account_two")?.passwordHash)
+    }
+
+    @Test
+    fun `Repeat merges of accounts sharing a display name converge`() {
+        assertEquals(2, definitions.merge(sharedDisplayName(), emptyMap()) { false })
+
+        assertEquals(0, definitions.merge(sharedDisplayName(), emptyMap()) { false })
+        assertEquals("one_hash", definitions.getByAccount("account_one")?.passwordHash)
+        assertEquals("two_hash", definitions.getByAccount("account_two")?.passwordHash)
+    }
+
+    @Test
+    fun `Display name lookup stays stable when two accounts claim one name`() {
+        definitions.merge(sharedDisplayName(), emptyMap()) { false }
+        val first = definitions.get("Shared")?.accountName
+        assertNotNull(first)
+
+        definitions.merge(sharedDisplayName(), emptyMap()) { false }
+
+        assertEquals(first, definitions.get("Shared")?.accountName)
+    }
+
+    @Test
+    fun `Merge moves the display name index when a name changes`() {
+        definitions.merge(mapOf("account" to definition("account", "Old name", hash = "hash")), emptyMap()) { false }
+
+        definitions.merge(mapOf("account" to definition("account", "New name", hash = "hash")), emptyMap()) { false }
+
+        assertNull(definitions.get("Old name"))
+        assertEquals("account", definitions.get("New name")?.accountName)
+        assertEquals("New name", definitions.getByAccount("account")?.displayName)
+    }
+
+    @Test
+    fun `Update moves the display name index and keeps account lookup stable`() {
+        val definition = definition("account", "Old name", hash = "hash")
+        definitions.merge(mapOf("account" to definition), emptyMap()) { false }
+
+        definitions.update("account", "New name", "Old name")
+
+        assertNull(definitions.get("Old name"))
+        assertSame(definition, definitions.get("New name"))
+        assertSame(definition, definitions.getByAccount("account"))
+        assertEquals("New name", definitions.displayNames["account"])
+    }
+
+    @Test
+    fun `Clan lookup resolves the owner's display name to their account`() {
+        definitions.merge(
+            mapOf("owner_account" to definition("owner_account", "Owner", hash = "hash")),
+            mapOf("owner_account" to clan("owner_account", "Owner")),
+        ) { false }
+
+        assertNotNull(definitions.clan("Owner"))
+        assertNotNull(definitions.clan("owner_account"))
+    }
+
+    private fun sharedDisplayName() = mapOf(
+        "account_one" to definition("account_one", "Shared", hash = "one_hash"),
+        "account_two" to definition("account_two", "Shared", hash = "two_hash"),
+    )
 
     private fun definition(account: String, display: String, hash: String) = AccountDefinition(
         accountName = account,

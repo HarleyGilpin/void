@@ -73,7 +73,7 @@ internal class PlayerAccountLoaderTest : KoinMock() {
             override fun load(accountName: String): PlayerSave? = playerSave
         }
         saveQueue = SaveQueue(storage, scope = TestScope())
-        definitions = AccountDefinitions(mutableMapOf("name" to AccountDefinition("name", "oldName", "", "hash")), mutableMapOf("accountname" to "name"))
+        definitions = AccountDefinitions(mutableMapOf("accountname" to AccountDefinition("accountName", "name", "", "hash")))
         accounts = mockk(relaxed = true)
         loader = PlayerAccountLoader(queue, storage, accounts, saveQueue, definitions, UnconfinedTestDispatcher())
     }
