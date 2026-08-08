@@ -29,6 +29,7 @@ scripts.txt
 # error logs
 hs_err_pid*
 data/logs/error.log
+/void-server.log
 
 # ide files
 /target
@@ -45,6 +46,10 @@ rebel-remote.xml
 ### Gradle ###
 .gradle
 /build/
+
+# isolated build outputs (see photobooth.init.gradle.kts)
+/build-photobooth/
+/.gradle-photobooth/
 
 # Ignore Gradle GUI config
 gradle-app.setting
