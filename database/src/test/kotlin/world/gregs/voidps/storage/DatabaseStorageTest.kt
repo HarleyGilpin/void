@@ -91,4 +91,33 @@ class DatabaseStorageTest : StorageTest(), DatabaseTest {
             storage.load(save.name)
         }
     }
+
+    @Test
+    fun `Flagged returns accounts with the variable set to true`() {
+        // Offer ids are unique across the whole table, so the fixture's offers can only belong to
+        // one of these accounts; none of them need offers to answer the question being tested.
+        fun account(name: String, variables: Map<String, Any>) = save.copy(
+            name = name,
+            variables = variables,
+            offers = emptyArray(),
+            history = emptyList(),
+        )
+
+        storage.save(
+            listOf(
+                account("dirty", mapOf("photo_booth_dirty" to true)),
+                account("clean", mapOf("photo_booth_dirty" to false)),
+                account("unset", mapOf("in_pvp" to true)),
+            ),
+        )
+
+        assertEquals(listOf("dirty"), storage.flagged("photo_booth_dirty"))
+    }
+
+    @Test
+    fun `Flagged returns nothing when no account has the variable`() {
+        storage.save(listOf(save))
+
+        assertEquals(emptyList<String>(), storage.flagged("photo_booth_dirty"))
+    }
 }

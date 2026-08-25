@@ -110,11 +110,13 @@ object PhotoBoothRenderer {
             }
             args.contains("--all-dirty") -> {
                 withStorage { repo ->
-                    val names = repo.names()
-                    println("Scanning ${names.size} accounts for photo_booth_dirty...")
+                    // Ask storage which accounts are flagged rather than loading every player to
+                    // check one variable - the full scan cost minutes on a live database.
+                    val names = repo.dirtyNames()
+                    println("${names.size} account(s) flagged photo_booth_dirty")
                     var rendered = 0
                     for (name in names) {
-                        val snapshot = repo.loadIfDirty(name) ?: continue
+                        val snapshot = repo.load(name) ?: continue
                         render(snapshot, name)
                         rendered++
                     }
