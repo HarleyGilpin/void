@@ -591,7 +591,37 @@ class DatabaseStorage : Storage {
 
     companion object {
 
+        /**
+         * Connects and brings the schema up to date. The server owns the schema, so it is the only
+         * thing that should be calling this.
+         *
+         * Note: `GameModules` resolves this reflectively by name and passes five arguments, so the
+         * signature can't gain parameters without updating that call site.
+         */
         fun connect(username: String, password: String, driver: String, url: String, poolSize: Int) {
+            dataSource(username, password, driver, url, poolSize)
+            transaction {
+                SchemaUtils.create(*tables, inBatch = true)
+                // Drop the legacy grand_exchange_claims -> grand_exchange_offers foreign key.
+                // Claims and offers are persisted by independent, uncoordinated save paths, so the
+                // RESTRICT constraint blocked the per-player offer delete/reinsert. IF EXISTS keeps
+                // this idempotent and a no-op on fresh databases.
+                exec("ALTER TABLE grand_exchange_claims DROP CONSTRAINT IF EXISTS fk_grand_exchange_claims_offer_id__id")
+            }
+        }
+
+        /**
+         * Connects without touching the schema, for tools sharing the live database.
+         *
+         * `SchemaUtils.create` introspects every table on each call, and the legacy `ALTER TABLE`
+         * takes an ACCESS EXCLUSIVE lock on `grand_exchange_claims` even when the constraint is
+         * already gone - neither belongs in a job that runs on a cron against a live world.
+         */
+        fun connectWithoutSchema(username: String, password: String, driver: String, url: String, poolSize: Int) {
+            dataSource(username, password, driver, url, poolSize)
+        }
+
+        private fun dataSource(username: String, password: String, driver: String, url: String, poolSize: Int) {
             val config = HikariConfig().apply {
                 jdbcUrl = url
                 driverClassName = driver
@@ -602,14 +632,6 @@ class DatabaseStorage : Storage {
                 transactionIsolation = "TRANSACTION_SERIALIZABLE"
             }
             Database.connect(HikariDataSource(config))
-            transaction {
-                SchemaUtils.create(*tables, inBatch = true)
-                // Drop the legacy grand_exchange_claims -> grand_exchange_offers foreign key.
-                // Claims and offers are persisted by independent, uncoordinated save paths, so the
-                // RESTRICT constraint blocked the per-player offer delete/reinsert. IF EXISTS keeps
-                // this idempotent and a no-op on fresh databases.
-                exec("ALTER TABLE grand_exchange_claims DROP CONSTRAINT IF EXISTS fk_grand_exchange_claims_offer_id__id")
-            }
         }
 
         internal val tables = arrayOf(AccountsTable, ExperienceTable, LevelsTable, VariablesTable, InventoriesTable, OffersTable, ActiveOffersTable, PlayerHistoryTable, ClaimsTable, ItemHistoryTable, ReportsTable, PlayerCountTable)

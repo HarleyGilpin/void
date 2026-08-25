@@ -131,7 +131,8 @@ object PhotoBoothRenderer {
 
     private inline fun withStorage(block: (SnapshotRepository) -> Unit) {
         val storage: Storage = if (Settings["storage.type", "files"] == "database") {
-            DatabaseStorage.connect(
+            // Reads only, against a database the server owns - see connectWithoutSchema.
+            DatabaseStorage.connectWithoutSchema(
                 Settings["storage.database.username"],
                 Settings["storage.database.password"],
                 Settings["storage.database.driver"],
