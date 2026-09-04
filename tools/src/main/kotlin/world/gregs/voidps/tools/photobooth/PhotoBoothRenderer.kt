@@ -19,8 +19,12 @@ import javax.imageio.ImageIO
 
 /**
  * Renders photo booth avatars from captured snapshots. For each player it writes two transparent
- * PNGs, mirroring Jagex's avatar service: `<name>_full.png` (full body) and `<name>_chat.png`
+ * PNGs, mirroring Jagex's avatar service: `<key>_full.png` (full body) and `<key>_chat.png`
  * (chathead; falls back to a head crop of the body when an item has no chathead model).
+ *
+ * `<key>` is the account's database id (e.g. `4242_chat.png`). Names are not safe as file keys:
+ * "a b", "a_b" and "A-B" are three different accounts that all sanitised to `a_b`, so one player's
+ * avatar could be pushed as another's. On file storage (no ids) the sanitised name is still used.
  *
  * Modes (one required):
  *  --snapshot=<male>;<looks>;<colours>;<equipment>  DB-less render of a literal snapshot (for testing)
@@ -60,15 +64,15 @@ object PhotoBoothRenderer {
             ItemDefinitions.definitions.getOrNull(itemId)?.type ?: EquipType.None
         }
 
-        fun writePng(image: java.awt.image.BufferedImage, suffix: String, name: String) {
-            val file = File(outDir, "${sanitize(name)}_$suffix.png")
-            val tmp = File(outDir, "${sanitize(name)}_$suffix.png.tmp")
+        fun writePng(image: java.awt.image.BufferedImage, suffix: String, name: String, key: String) {
+            val file = File(outDir, "${key}_$suffix.png")
+            val tmp = File(outDir, "${key}_$suffix.png.tmp")
             ImageIO.write(image, "png", tmp)
             tmp.renameTo(file)
             println("  ✓ $name [$suffix] -> ${file.path}")
         }
 
-        fun render(snapshot: PhotoSnapshot, name: String) {
+        fun render(snapshot: PhotoSnapshot, name: String, key: String = sanitize(name)) {
             val body = assembler.assembleBody(snapshot)
             val head = assembler.assembleHead(snapshot)
             if (body == null && head == null) {
@@ -79,11 +83,11 @@ object PhotoBoothRenderer {
             // rather than staring straight ahead. Overridable via --yaw/--pitch.
             val chatYaw = args.value("--yaw")?.toDoubleOrNull() ?: -25.0
             val chatPitch = args.value("--pitch")?.toDoubleOrNull() ?: 8.0
-            body?.let { writePng(AvatarRenderer.render(it, size), "full", name) }
+            body?.let { writePng(AvatarRenderer.render(it, size), "full", name, key) }
             when {
-                head != null -> writePng(AvatarRenderer.render(head, size, pitchDegrees = chatPitch, yawDegrees = chatYaw), "chat", name)
+                head != null -> writePng(AvatarRenderer.render(head, size, pitchDegrees = chatPitch, yawDegrees = chatYaw), "chat", name, key)
                 // No dedicated chathead mesh (e.g. full helm): crop the head from the body model.
-                body != null -> writePng(AvatarRenderer.renderHeadCrop(body, size, pitchDegrees = chatPitch, yawDegrees = chatYaw), "chat", name)
+                body != null -> writePng(AvatarRenderer.renderHeadCrop(body, size, pitchDegrees = chatPitch, yawDegrees = chatYaw), "chat", name, key)
             }
         }
 
@@ -97,14 +101,14 @@ object PhotoBoothRenderer {
                     // '+' stands in for spaces so account names survive -Pargs space-splitting.
                     val name = args.value("--player")!!.replace('+', ' ')
                     val snapshot = repo.load(name) ?: run { println("No snapshot for $name"); return@withStorage }
-                    render(snapshot, name)
+                    render(snapshot, name, fileKey(repo, name))
                 }
             }
             args.value("--players") != null -> {
                 withStorage { repo ->
                     args.value("--players")!!.split(",").map { it.trim().replace('+', ' ') }.filter { it.isNotEmpty() }.forEach { name ->
                         val snapshot = repo.load(name)
-                        if (snapshot == null) println("  - $name: no snapshot") else render(snapshot, name)
+                        if (snapshot == null) println("  - $name: no snapshot") else render(snapshot, name, fileKey(repo, name))
                     }
                 }
             }
@@ -117,7 +121,7 @@ object PhotoBoothRenderer {
                     var rendered = 0
                     for (name in names) {
                         val snapshot = repo.load(name) ?: continue
-                        render(snapshot, name)
+                        render(snapshot, name, fileKey(repo, name))
                         rendered++
                     }
                     println("Rendered $rendered dirty avatar(s)")
@@ -154,6 +158,9 @@ object PhotoBoothRenderer {
     }
 
     private fun sanitize(name: String): String = name.lowercase().replace(Regex("[^a-z0-9_-]"), "_")
+
+    /** Account id when storage knows one (database), else the legacy sanitised name (file storage). */
+    private fun fileKey(repo: SnapshotRepository, name: String): String = repo.accountId(name)?.toString() ?: sanitize(name)
 
     private fun Array<String>.value(prefix: String): String? =
         firstOrNull { it.startsWith("$prefix=") }?.substringAfter("=")

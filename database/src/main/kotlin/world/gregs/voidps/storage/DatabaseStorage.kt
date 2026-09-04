@@ -233,6 +233,16 @@ class DatabaseStorage : Storage {
             .map { it[AccountsTable.name] }
     }
 
+    /** Primary key of `accounts` for a name (case-insensitive), or null if unknown. */
+    fun accountId(accountName: String): Int? = transaction {
+        val lower = accountName.lowercase()
+        AccountsTable
+            .select(AccountsTable.id)
+            .where { LowerCase(AccountsTable.name) eq lower }
+            .singleOrNull()
+            ?.get(AccountsTable.id)
+    }
+
     override fun exists(accountName: String): Boolean = transaction {
         val lower = accountName.lowercase()
         AccountsTable
