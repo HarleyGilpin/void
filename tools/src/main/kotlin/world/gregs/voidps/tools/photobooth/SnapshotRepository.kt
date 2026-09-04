@@ -24,6 +24,12 @@ class SnapshotRepository(private val storage: Storage) {
         else -> names().filter { storage.load(it)?.variables?.get(DIRTY) == true }
     }
 
+    /**
+     * The account's database id, used to name the output PNGs. Null on file storage, where
+     * accounts have no id; callers fall back to a name-derived file name there.
+     */
+    fun accountId(accountName: String): Int? = (storage as? DatabaseStorage)?.accountId(accountName)
+
     /** Loads a player's snapshot, or null if they have never used the booth. */
     fun load(accountName: String): PhotoSnapshot? {
         val variables = storage.load(accountName)?.variables ?: return null
