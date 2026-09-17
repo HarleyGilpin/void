@@ -74,6 +74,9 @@ class AccountManagerTest : KoinMock() {
             override fun saveReport(report: AbuseReport) {
             }
 
+            override fun create(account: PlayerSave): Boolean = false
+
+
             override fun exists(accountName: String): Boolean = false
 
             override fun password(accountName: String): String? = null

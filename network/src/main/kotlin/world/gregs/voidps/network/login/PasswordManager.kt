@@ -12,7 +12,7 @@ class PasswordManager(private val account: AccountLoader) {
     private val argon2 by lazy { Argon2Factory.create(Argon2Factory.Argon2Types.ARGON2i) }
 
     fun validate(username: String, password: String): Int {
-        if (username.length > 12) {
+        if (!AccountNames.valid(username)) {
             return Response.LOGIN_SERVER_REJECTED_SESSION
         }
         val passwordHash = account.password(username)

@@ -2,6 +2,10 @@
 format = "int"
 persist = true
 
+[playtime]
+format = "int"
+persist = true
+
 [rights]
 format = "list"
 persist = true
@@ -9,6 +13,14 @@ values = [ "None", "Mod", "Admin" ]
 
 [display_name]
 format = "string"
+persist = true
+
+[choose_name]
+format = "boolean"
+persist = true
+
+[registered]
+format = "int"
 persist = true
 
 [lifetime_xp]

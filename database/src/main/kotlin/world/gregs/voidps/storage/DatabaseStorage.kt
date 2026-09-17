@@ -2,11 +2,13 @@ package world.gregs.voidps.storage
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
 import org.jetbrains.exposed.sql.transactions.transaction
 import world.gregs.voidps.engine.data.AbuseReport
 import world.gregs.voidps.engine.data.PlayerSave
+import world.gregs.voidps.engine.data.RecentEvent
 import world.gregs.voidps.engine.data.Storage
 import world.gregs.voidps.engine.data.config.AccountDefinition
 import world.gregs.voidps.engine.data.exchange.*
@@ -199,6 +201,9 @@ class DatabaseStorage : Storage {
         saveInventories(accounts, playerIds)
         saveOffers(accounts, playerIds)
         saveHistories(accounts, playerIds)
+        saveKills(accounts, playerIds)
+        saveRecords(accounts, playerIds)
+        saveRecentEvents(accounts, playerIds)
     }
 
     override fun savePlayerCount(world: Int, count: Int): Unit = transaction {
@@ -243,6 +248,39 @@ class DatabaseStorage : Storage {
             ?.get(AccountsTable.id)
     }
 
+    override fun create(account: PlayerSave): Boolean {
+        try {
+            return transaction {
+                val lower = account.name.lowercase()
+                val existing = AccountsTable
+                    .select(AccountsTable.id)
+                    .where { LowerCase(AccountsTable.name) eq lower }
+                    .count()
+                if (existing > 0) {
+                    return@transaction false
+                }
+                val list = listOf(account)
+                saveAccounts(list)
+                val playerIds = AccountsTable
+                    .select(AccountsTable.id, AccountsTable.name)
+                    .where { LowerCase(AccountsTable.name) eq lower }
+                    .associate { it[AccountsTable.name].lowercase() to it[AccountsTable.id] }
+                saveExperience(list, playerIds)
+                saveLevels(list, playerIds)
+                saveVariables(list, playerIds)
+                saveInventories(list, playerIds)
+                saveOffers(list, playerIds)
+                saveHistories(list, playerIds)
+                true
+            }
+        } catch (e: ExposedSQLException) {
+            if (e.sqlState == UNIQUE_VIOLATION || e.sqlState == SERIALIZATION_FAILURE) {
+                return false
+            }
+            throw e
+        }
+    }
+
     override fun exists(accountName: String): Boolean = transaction {
         val lower = accountName.lowercase()
         AccountsTable
@@ -278,6 +316,9 @@ class DatabaseStorage : Storage {
         val ranks = playerRow[AccountsTable.ranks]
         val offers = loadOffers(playerId)
         val history = loadHistory(playerId)
+        val kills = loadKills(playerId)
+        val records = loadRecords(playerId)
+        val recentEvents = loadRecentEvents(playerId)
         return@transaction PlayerSave(
             name = playerRow[AccountsTable.name],
             password = playerRow[AccountsTable.passwordHash],
@@ -294,6 +335,9 @@ class DatabaseStorage : Storage {
             ignores = playerRow[AccountsTable.ignores],
             offers = offers,
             history = history,
+            kills = kills,
+            records = records,
+            recentEvents = recentEvents,
         )
     }
 
@@ -357,6 +401,38 @@ class DatabaseStorage : Storage {
             this[PlayerHistoryTable.item] = history.item
             this[PlayerHistoryTable.amount] = history.amount
             this[PlayerHistoryTable.coins] = history.coins
+        }
+    }
+
+    private fun saveKills(accounts: List<PlayerSave>, playerIds: Map<String, Int>) {
+        KillsTable.deleteWhere { playerId inList playerIds.values }
+        val killData = accounts.flatMap { save -> save.kills.map { Triple(save.name, it.key, it.value) } }
+        KillsTable.batchUpsert(killData, KillsTable.playerId, KillsTable.category) { (id, category, count) ->
+            this[KillsTable.playerId] = playerIds.getValue(id.lowercase())
+            this[KillsTable.category] = category
+            this[KillsTable.count] = count
+        }
+    }
+
+    private fun saveRecords(accounts: List<PlayerSave>, playerIds: Map<String, Int>) {
+        RecordsTable.deleteWhere { playerId inList playerIds.values }
+        val killData = accounts.flatMap { save -> save.records.map { Triple(save.name, it.key, it.value) } }
+        RecordsTable.batchUpsert(killData, RecordsTable.playerId, RecordsTable.type) { (id, type, millis) ->
+            this[RecordsTable.playerId] = playerIds.getValue(id.lowercase())
+            this[RecordsTable.type] = type
+            this[RecordsTable.millis] = millis
+        }
+    }
+
+    private fun saveRecentEvents(accounts: List<PlayerSave>, playerIds: Map<String, Int>) {
+        RecentEventsTable.deleteWhere { playerId inList playerIds.values }
+        val eventData = accounts.flatMap { save -> save.recentEvents.withIndex().map { Pair(save.name, it) } }
+        RecentEventsTable.batchUpsert(eventData, RecentEventsTable.playerId, RecentEventsTable.index) { (id, event) ->
+            this[RecentEventsTable.playerId] = playerIds.getValue(id.lowercase())
+            this[RecentEventsTable.index] = event.index
+            this[RecentEventsTable.time] = event.value.time
+            this[RecentEventsTable.title] = event.value.title
+            this[RecentEventsTable.description] = event.value.description
         }
     }
 
@@ -599,6 +675,28 @@ class DatabaseStorage : Storage {
         ExchangeHistory(item, amount, coins)
     }
 
+    private fun loadKills(playerId: Int): Map<String, Int> = KillsTable.selectAll().where { KillsTable.playerId eq playerId }.associate { row ->
+        val category = row[KillsTable.category]
+        val count = row[KillsTable.count]
+        category to count
+    }
+
+    private fun loadRecords(playerId: Int): Map<String, Int> = RecordsTable.selectAll().where { RecordsTable.playerId eq playerId }.associate { row ->
+        val type = row[RecordsTable.type]
+        val millis = row[RecordsTable.millis]
+        type to millis
+    }
+
+    private fun loadRecentEvents(playerId: Int): List<RecentEvent> = RecentEventsTable.selectAll()
+        .where { RecentEventsTable.playerId eq playerId }
+        .sortedBy { it[RecentEventsTable.index] }
+        .map { row ->
+            val time = row[RecentEventsTable.time]
+            val title = row[RecentEventsTable.title]
+            val description = row[RecentEventsTable.description]
+            RecentEvent(time, title, description)
+        }
+
     companion object {
 
         /**
@@ -617,6 +715,9 @@ class DatabaseStorage : Storage {
                 // RESTRICT constraint blocked the per-player offer delete/reinsert. IF EXISTS keeps
                 // this idempotent and a no-op on fresh databases.
                 exec("ALTER TABLE grand_exchange_claims DROP CONSTRAINT IF EXISTS fk_grand_exchange_claims_offer_id__id")
+                // Accounts registered from the client are named by email address, wider than the original 12 character usernames.
+                exec("ALTER TABLE accounts ALTER COLUMN name TYPE VARCHAR(254)")
+                exec("ALTER TABLE abuse_reports ALTER COLUMN reporter TYPE VARCHAR(254)")
             }
         }
 
@@ -644,7 +745,10 @@ class DatabaseStorage : Storage {
             Database.connect(HikariDataSource(config))
         }
 
-        internal val tables = arrayOf(AccountsTable, ExperienceTable, LevelsTable, VariablesTable, InventoriesTable, OffersTable, ActiveOffersTable, PlayerHistoryTable, ClaimsTable, ItemHistoryTable, ReportsTable, PlayerCountTable)
+        private const val UNIQUE_VIOLATION = "23505"
+        private const val SERIALIZATION_FAILURE = "40001"
+
+        internal val tables = arrayOf(AccountsTable, ExperienceTable, LevelsTable, VariablesTable, InventoriesTable, OffersTable, ActiveOffersTable, PlayerHistoryTable, ClaimsTable, ItemHistoryTable, ReportsTable, PlayerCountTable, KillsTable, RecordsTable, RecentEventsTable)
 
         private const val TYPE_STRING = 0.toByte()
         private const val TYPE_INT = 1.toByte()

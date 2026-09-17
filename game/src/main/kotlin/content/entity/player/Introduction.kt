@@ -17,17 +17,35 @@ import world.gregs.voidps.engine.entity.character.player.name
 import world.gregs.voidps.engine.inv.add
 import world.gregs.voidps.engine.inv.inventory
 import world.gregs.voidps.engine.queue.queue
+import world.gregs.voidps.engine.queue.strongQueue
+import world.gregs.voidps.engine.timer.epochMilliseconds
+import java.util.concurrent.TimeUnit
 
 class Introduction : Script {
 
     fun welcome(player: Player) {
         player.message("Welcome to ${Settings["server.name"]}.", ChatType.Welcome)
+        player["login_time"] = epochMilliseconds()
         if (player.contains("creation")) {
             return
         }
         if (player.inTutorial) {
             return // Tutorial Island owns character creation, the welcome and the starter kit
         }
+        // Character creation ends with the name panel, otherwise fall back to a dialogue prompt
+        if (player["choose_name", false] && !player.isBot && !Settings["world.start.creation", true]) {
+            player.sendVariable("movement")
+            player["delay"] = -1
+            player.strongQueue("choose_name") {
+                chooseDisplayName()
+                start(player)
+            }
+            return
+        }
+        start(player)
+    }
+
+    private fun start(player: Player) {
         if (Settings["world.start.creation", true] && !player.isBot) {
             player.sendVariable("movement")
             player["delay"] = -1
@@ -49,6 +67,13 @@ class Introduction : Script {
             }
             flagAppearance()
             setup(this)
+        }
+
+        playerDespawn {
+            val start = get("login_time", 0L)
+            val duration = epochMilliseconds() - start
+            val seconds = TimeUnit.MILLISECONDS.toSeconds(duration).toInt()
+            inc("playtime", seconds)
         }
     }
 

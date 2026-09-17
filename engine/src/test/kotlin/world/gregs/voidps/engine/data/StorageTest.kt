@@ -46,6 +46,42 @@ abstract class StorageTest {
     }
 
     @Test
+    fun `Create a new account`() {
+        assertTrue(storage.create(save))
+
+        val account = storage.load(save.name)
+
+        assertNotNull(account)
+        assertEquals(save.name, account.name)
+        assertEquals(save.password, account.password)
+        assertEquals(save.variables.keys, account.variables.keys)
+        assertTrue(storage.exists(save.name))
+    }
+
+    @Test
+    fun `Create an existing account fails without overriding`() {
+        storage.save(listOf(save))
+
+        val duplicate = save.copy(password = "different")
+        assertFalse(storage.create(duplicate))
+
+        val account = storage.load(save.name)
+        assertNotNull(account)
+        assertEquals(save.password, account.password)
+    }
+
+    @Test
+    fun `Create an email named account`() {
+        val email = save.copy(name = "Someone@Example.com")
+        assertTrue(storage.create(email))
+
+        assertTrue(storage.exists("someone@example.com"))
+        val account = storage.load("someone@example.com")
+        assertNotNull(account)
+        assertEquals("Someone@Example.com", account.name)
+    }
+
+    @Test
     fun `Store an existing account overrides data`() {
         storage.save(listOf(save))
 
@@ -282,6 +318,9 @@ abstract class StorageTest {
             ignores = listOf("Mod Murdoch"),
             offers = arrayOf(ExchangeOffer(1, "item", 4, 123, OfferState.PendingSell, 1, 321)),
             history = listOf(ExchangeHistory("item", 123, 321)),
+            kills = mapOf("chickens" to 4, "kree_arra" to 2),
+            records = mapOf("kree_arra" to 1234, "kree_arra_duo" to 4321),
+            recentEvents = listOf(RecentEvent(132, "Title", "desc")),
         )
     }
 }

@@ -4,7 +4,7 @@ import org.jetbrains.exposed.sql.Table
 
 internal object AccountsTable : Table("accounts") {
     val id = integer("id").autoIncrement().uniqueIndex()
-    val name = varchar("name", 12).uniqueIndex()
+    val name = varchar("name", 254).uniqueIndex()
     val passwordHash = text("password_hash")
     val tile = integer("tile")
     val blockedSkills = array<Int>("blocked")
@@ -161,7 +161,7 @@ internal object ClaimsTable : Table("grand_exchange_claims") {
 
 internal object ReportsTable : Table("abuse_reports") {
     val id = integer("id").autoIncrement().uniqueIndex()
-    val reporter = varchar("reporter", 12)
+    val reporter = varchar("reporter", 254)
     val reported = text("reported")
     val rule = integer("rule")
     val ruleName = text("rule_name")
@@ -195,4 +195,33 @@ internal object ItemHistoryTable : Table("grand_exchange_item_history") {
     val averageLow = double("average_low")
     val volumeHigh = long("volume_high")
     val volumeLow = long("volume_low")
+}
+
+internal object KillsTable : Table("kills") {
+    val playerId = integer("player_id").references(AccountsTable.id)
+    val category = text("category")
+    val count = integer("count")
+    init {
+        index(true, playerId, category)
+    }
+}
+
+internal object RecordsTable : Table("timed_records") {
+    val playerId = integer("player_id").references(AccountsTable.id)
+    val type = text("type")
+    val millis = integer("millis")
+    init {
+        index(true, playerId, type)
+    }
+}
+
+internal object RecentEventsTable : Table("recent_events") {
+    val playerId = integer("player_id").references(AccountsTable.id)
+    val index = integer("index")
+    val time = integer("time")
+    val title = text("title")
+    val description = text("description")
+    init {
+        index(true, playerId, index)
+    }
 }
