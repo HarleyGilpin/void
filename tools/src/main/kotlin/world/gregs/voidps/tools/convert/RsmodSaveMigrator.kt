@@ -256,6 +256,9 @@ object RsmodSaveMigrator {
             ignores = emptyList(),
             offers = Array(6) { ExchangeOffer.EMPTY },
             history = emptyList(),
+            kills = emptyMap(),
+            records = emptyMap(),
+            recentEvents = emptyList(),
         )
     }
 

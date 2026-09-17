@@ -93,6 +93,8 @@ internal class PlayerAccountCreatorTest : KoinMock() {
 
             override fun exists(accountName: String): Boolean = saved.containsKey(accountName.lowercase())
 
+            override fun password(accountName: String): String? = saved[accountName.lowercase()]?.password
+
             override fun load(accountName: String): PlayerSave? = saved[accountName.lowercase()]
         }
         val accounts: AccountManager = mockk()

@@ -1,7 +1,6 @@
 package content.entity.world
 
 import com.github.michaelbull.logging.InlineLogger
-import content.social.friend.world
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

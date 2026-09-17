@@ -50,8 +50,9 @@ internal class SaveQueueTest : KoinMock() {
 
         override fun create(account: PlayerSave): Boolean = false
 
-
         override fun exists(accountName: String): Boolean = false
+
+        override fun password(accountName: String): String? = null
 
         override fun load(accountName: String): PlayerSave? = null
     }

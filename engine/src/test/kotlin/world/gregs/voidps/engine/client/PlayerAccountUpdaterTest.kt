@@ -94,6 +94,8 @@ internal class PlayerAccountUpdaterTest : KoinMock() {
 
             override fun exists(accountName: String): Boolean = saved.containsKey(accountName.lowercase())
 
+            override fun password(accountName: String): String? = saved[accountName.lowercase()]?.password
+
             override fun load(accountName: String): PlayerSave? {
                 loadException?.let { throw it }
                 return saved[accountName.lowercase()]
