@@ -32,6 +32,7 @@ scripts.txt
 hs_err_pid*
 data/logs/error.log
 /void-server.log
+/void-server-backup.log
 
 # ide files
 /target
