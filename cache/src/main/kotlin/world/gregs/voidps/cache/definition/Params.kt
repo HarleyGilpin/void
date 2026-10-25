@@ -136,6 +136,7 @@ object Params {
 
     /** Item ids a quest expects the player to bring; used by the quest prep command. */
     const val REQ_ITEM_IDS = 5267
+    const val FUN_WEAPON = 5268
 
     const val PREP_VARS = 5269
 
@@ -266,12 +267,14 @@ object Params {
     const val CLOSED = 5271
     const val STUMP = 5272
     const val DEPLETED = 5273
+    const val BOT_CAPACITY = 5274
 
     private fun custom(name: String) = when (name) {
         "opened" -> OPENED
         "closed" -> CLOSED
         "stump" -> STUMP
         "depleted" -> DEPLETED
+        "bot_capacity" -> BOT_CAPACITY
         "disengage" -> DISENGAGE
         "summoning_beast_of_burden_essence" -> SUMMONING_BEAST_OF_BURDEN_ESSENCE
         "summoning_special_cost" -> SUMMONING_SPECIAL_COST
@@ -420,6 +423,7 @@ object Params {
         "food" -> FOOD
         "food2" -> FOOD2
         "freeze_ticks" -> FREEZE_TICKS
+        "fun_weapon" -> FUN_WEAPON
         "full" -> FULL
         "gate" -> GATE
         "god" -> GOD

@@ -130,7 +130,7 @@ object GameObjects : ZoneBatchUpdates.Sender {
      * Decide to store [GameObject]s which don't have options or configs
      * Skipping unused objects uses less ram but makes content creation harder.
      */
-    private fun interactive(definition: ObjectDefinition) = storeUnused || definition.options != null || definition.contains("id")
+    private fun interactive(definition: ObjectDefinition) = storeUnused || definition.options != null || definition.stringId.isNotBlank()
 
     /**
      * Removes an object, optionally reverting after [ticks]
@@ -210,8 +210,9 @@ object GameObjects : ZoneBatchUpdates.Sender {
     fun replace(original: GameObject, replacement: GameObject, ticks: Int = NEVER, collision: Boolean = true, onRevert: (() -> Unit)? = null) {
         // Removing a same-tile replacement re-adds the object [set] on game load by itself, so
         // adding [original] back would revert a replaced replacement to the previous replacement
-        // rather than to the original.
-        val restored = replacement.index == original.index && map[original] > 1
+        // rather than to the original. Only applies to temporary replacements, one without a timer is
+        // permanent (such as furniture added in place of its hotspot) so is what gets reverted to.
+        val restored = replacement.index == original.index && map[original] > 1 && timers.contains(original)
         remove(original, collision)
         add(replacement, collision)
         timers.add(setOf(original, replacement), ticks) {
@@ -377,6 +378,21 @@ object GameObjects : ZoneBatchUpdates.Sender {
         for (index in replacements.keys.filter { Tile(it and TILE_MASK).zone == zone }) {
             replacements.remove(index)
         }
+    }
+
+    /**
+     * Clears all [zones] of original and replacement objects, scanning the global maps once
+     * Note: Doesn't undo collision changes
+     */
+    fun clear(zones: Set<Zone>) {
+        if (zones.isEmpty()) {
+            return
+        }
+        for (zone in zones) {
+            map.deallocateZone(zone)
+        }
+        timers.cancel(zones)
+        replacements.keys.removeIf { Tile(it and TILE_MASK).zone in zones }
     }
 
     /**
