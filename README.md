@@ -54,6 +54,14 @@
 2. Run the server as normal [^](#quick-setup).
 3. Open `http://localhost:8080/play` in the browser and login with any username or password to create a new account.
 
+### Publishing the webclient to a website
+
+If a website serves the client rather than the embedded Ktor server, run
+`./publish-webclient.sh` after replacing `data/webclient.zip`. It unzips
+`void-client.js` into the site's docroot under a content-hashed filename and
+points a `manifest.json` at it, so players pick up the new build on their next
+page load without a CDN purge. Override the defaults with `ZIP=` and `SITE=`.
+
 For more details see the full [Installation Guide](https://greghib.github.io/void/docs/installation-guide).
 
 > [!NOTE]
