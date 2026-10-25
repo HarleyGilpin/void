@@ -11,12 +11,12 @@
 - **`val` by default**; snake_case string IDs; class name matches file; no `by lazy {}`.
 - **Comments** — infrequent; only when code can't self-document.
 - Use wildcards and comma-separated IDs over multiple handler registrations `npcApproach("Spy-on", "*_penguin,*_turkey") { ... }`.
-- Data lives in `*.tables.toml` structured around access.
+- Data lives in `data/`, in files named `<name>.<type>.toml` under a directory mirroring the content package. Tabular data goes in `*.tables.toml`, structured around access.
   - Header declares column types.
   - Single value accessed as `Tables.int("spells.$spell.xp")`.
   - Rows accessed as `val row = Rows.get("cooking.${itemId}")`.
   - All rows as `Tables.get("barrows_brothers").rows()`.
   - Fields as `row.int("level")`, `row.string("type")`, etc.
-- Persistent variables must be declared in `.vars.toml`, `.varbits.toml`, or `varps.toml` configs.
+- Persistent variables must be declared in `*.vars.toml`, `*.varbits.toml`, or `*.varps.toml` configs.
 - Format with `gradle spotlessApply`
 - **Citations** — comment data with its origin: wiki/web data gets the URL, a made-up `message()` gets `// TODO proper message`, a guessed stat is commented as guessed (also in `.toml`).

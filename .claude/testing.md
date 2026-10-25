@@ -4,4 +4,6 @@ Content tests extend `WorldTest` (`game/src/test/kotlin/WorldTest.kt`): boots fu
 
 Helpers: `createPlayer()`, `createNPC()`, `createObject()`, `createFloorItem()`, `tick()`, `tickIf()`.
 
-`WorldTest` is expensive (`@TestInstance(PER_CLASS)`). Use it only for integration-level content tests. Engine unit tests use plain JUnit 5.
+`WorldTest` is expensive (`@TestInstance(PER_CLASS)`). Use it only for integration-level content tests. Engine unit tests use plain JUnit 5 (with mockk).
+
+Content tests live in `game/src/test/kotlin/content/`, mirroring the `content/` package they cover.

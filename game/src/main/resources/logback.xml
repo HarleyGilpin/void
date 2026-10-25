@@ -4,7 +4,7 @@
     <conversionRule conversionWord="message" class="world.gregs.voidps.engine.log.LogMessageColourConverter"/>
     <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%colour(%level) %green([%logger{0}]) %message(%msg){}%n%red(%ex)</pattern>
+            <pattern>%d{HH:mm:ss.SSS} %colour(%level) %green([%logger{0}]) %message(%msg){}%n%red(%ex)</pattern>
         </encoder>
     </appender>
     <root level="info">
