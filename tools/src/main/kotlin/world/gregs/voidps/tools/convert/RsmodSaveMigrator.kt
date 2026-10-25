@@ -202,8 +202,7 @@ object RsmodSaveMigrator {
         return result
     }
 
-    private fun normalize(name: String): String =
-        name.lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
+    private fun normalize(name: String): String = name.lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
 
     private fun RsmodSave.toPlayerSave(
         itemMap: Int2ObjectOpenHashMap<String>,
@@ -290,11 +289,9 @@ object RsmodSaveMigrator {
         return arr
     }
 
-    private fun Array<String>.argInt(prefix: String): Int? =
-        firstOrNull { it.startsWith("$prefix=") }?.substringAfter("=")?.toIntOrNull()
+    private fun Array<String>.argInt(prefix: String): Int? = firstOrNull { it.startsWith("$prefix=") }?.substringAfter("=")?.toIntOrNull()
 
-    private fun Array<String>.argString(prefix: String): String? =
-        firstOrNull { it.startsWith("$prefix=") }?.substringAfter("=")
+    private fun Array<String>.argString(prefix: String): String? = firstOrNull { it.startsWith("$prefix=") }?.substringAfter("=")
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     private data class RsmodSave(
