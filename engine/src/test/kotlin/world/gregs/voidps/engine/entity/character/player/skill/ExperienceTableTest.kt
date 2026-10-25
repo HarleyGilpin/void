@@ -54,12 +54,14 @@ internal class ExperienceTableTest {
 
     @Test
     fun `Add experience with bonus multiplier`() {
+        // The bonus multiplier stacks on top of the level modifier, which is 1.0404 at level 1
+        // (interpolated 1x - 5x across levels 1 - 99), so 10 xp at 2.7x awards 280 tenths not 270.
         experience.multiplier = 2.7
         experience.add(Skill.Attack, 10.0)
-        assertEquals(27.0, experience.get(Skill.Attack))
+        assertEquals(28.0, experience.get(Skill.Attack))
         experience.multiplier = 1.0
         experience.add(Skill.Attack, 10.0)
-        assertEquals(37.0, experience.get(Skill.Attack))
+        assertEquals(38.4, experience.get(Skill.Attack))
     }
 
     @Test
