@@ -83,6 +83,21 @@ interface Storage {
     fun accounts(): List<PlayerSave>
 
     /**
+     * Account names which have boolean variable [variable] set to true.
+     *
+     * Defaults to reading every account, which costs one local file read each on file storage.
+     * Database storage overrides it with a single indexed query, as the full scan cost minutes
+     * against a live world.
+     */
+    fun flagged(variable: String): List<String> = names().keys.filter { load(it)?.variables?.get(variable) == true }
+
+    /**
+     * The account's storage id, or null where accounts have no id (file storage). Callers that key
+     * files by account use it so two names can't collide on one sanitised key.
+     */
+    fun accountId(accountName: String): Int? = null
+
+    /**
      * Stores the current online player [count] for [world], overwriting any previous value.
      * No-op by default; database storage persists it for external consumers (e.g. the website).
      */

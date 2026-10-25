@@ -230,7 +230,7 @@ class DatabaseStorage : Storage {
      * Account names which have boolean variable [variable] set to true.
      * One query, so callers can find the accounts they care about without loading every player.
      */
-    fun flagged(variable: String): List<String> = transaction {
+    override fun flagged(variable: String): List<String> = transaction {
         (AccountsTable innerJoin VariablesTable)
             .select(AccountsTable.name)
             .where { (VariablesTable.name eq variable) and (VariablesTable.boolean eq true) }
@@ -238,7 +238,7 @@ class DatabaseStorage : Storage {
     }
 
     /** Primary key of `accounts` for a name (case-insensitive), or null if unknown. */
-    fun accountId(accountName: String): Int? = transaction {
+    override fun accountId(accountName: String): Int? = transaction {
         val lower = accountName.lowercase()
         AccountsTable
             .select(AccountsTable.id)

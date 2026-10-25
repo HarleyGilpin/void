@@ -9,6 +9,7 @@ kotlin {
         implementation(project(":engine"))
         implementation(project(":game"))
         implementation(project(":network"))
+        implementation(project(":tools:avatar"))
         implementation(project(":database"))
         implementation(libs.exposed)
         implementation(libs.exposed.jdbc)
@@ -68,7 +69,6 @@ tasks.register<JavaExec>("migrateRsmodSaves") {
     val cliArgs = (findProperty("args") as String?)?.split(" ")?.filter { it.isNotBlank() } ?: emptyList()
     args = cliArgs
 }
-
 
 tasks.register<JavaExec>("renderPhotoBooth") {
     group = "photobooth"

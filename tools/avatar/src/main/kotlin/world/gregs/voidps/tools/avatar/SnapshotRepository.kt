@@ -1,7 +1,6 @@
 package world.gregs.voidps.tools.avatar
 
 import world.gregs.voidps.engine.data.Storage
-import world.gregs.voidps.storage.DatabaseStorage
 
 /**
  * Reads photo booth snapshots from persisted player data (the `photo_booth_*` variables written by
@@ -13,22 +12,16 @@ class SnapshotRepository(private val storage: Storage) {
     fun names(): Set<String> = storage.names().keys
 
     /**
-     * Account names flagged for a re-render.
-     *
-     * The database answers this in one query. File storage has no equivalent, so it falls back to
-     * reading each save; that only costs a local file read per account, and it keeps the tool usable
-     * on a `storage.type=files` install.
+     * Account names flagged for a re-render. Storage decides how to answer it: the database does so
+     * in one query, file storage reads each save.
      */
-    fun dirtyNames(): List<String> = when (storage) {
-        is DatabaseStorage -> storage.flagged(DIRTY)
-        else -> names().filter { storage.load(it)?.variables?.get(DIRTY) == true }
-    }
+    fun dirtyNames(): List<String> = storage.flagged(DIRTY)
 
     /**
-     * The account's database id, used to name the output PNGs. Null on file storage, where
-     * accounts have no id; callers fall back to a name-derived file name there.
+     * The account's storage id, used to name the output PNGs. Null on file storage, where accounts
+     * have no id; callers fall back to a name-derived file name there.
      */
-    fun accountId(accountName: String): Int? = (storage as? DatabaseStorage)?.accountId(accountName)
+    fun accountId(accountName: String): Int? = storage.accountId(accountName)
 
     /** Loads a player's snapshot, or null if they have never used the booth. */
     fun load(accountName: String): PhotoSnapshot? {
