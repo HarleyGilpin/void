@@ -9,6 +9,7 @@ dependencies {
     implementation(libs.ktor)
     implementation(libs.ktor.network)
     implementation(libs.jbcrypt)
+    implementation(libs.argon2.jvm)
     implementation(libs.inline.logging)
     implementation(libs.kotlinx.coroutines)
 
