@@ -1,6 +1,5 @@
 package content.area.misthalin.lumbridge.blood_pact
 
-import content.entity.combat.dead
 import content.entity.combat.killer
 import content.entity.effect.transform
 import content.entity.player.dialogue.Angry
@@ -28,7 +27,7 @@ class Caitlin : Script {
             dead = false
             mode = EmptyMode
             huntMode = ""
-            levels.restore(Skill.Constitution)
+            levels.clear(Skill.Constitution)
             val player = killer as? Player
             if (player != null) {
                 player["blood_pact_caitlin"] = "defeated"

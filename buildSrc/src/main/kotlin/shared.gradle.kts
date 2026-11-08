@@ -25,11 +25,8 @@ kotlin {
 }
 
 spotless {
-    // Nested modules (e.g. tools:app inside tools) check their own files
-    val nested = subprojects.map { "${it.projectDir.relativeTo(projectDir).invariantSeparatorsPath}/**" }
     kotlin {
-        target("**/*.kt", "**/*.kts")
-        targetExclude(listOf("temp/**", "**/build/**", "**/out/**") + nested)
+        target("src/**/*.kt", "src/**/*.kts")
         val rules = mutableMapOf<String, Any>(
             "ktlint_code_style" to "intellij_idea",
             "ktlint_standard_no-wildcard-imports" to "disabled",
@@ -57,6 +54,12 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-engine:5.13.4")
 }
 
+val hotSwapArgs = listOf("-XX:+IgnoreUnrecognizedVMOptions", "-XX:+AllowEnhancedClassRedefinition")
+tasks.withType<Test>().configureEach { jvmArgs(hotSwapArgs) }
+tasks.withType<JavaExec>().configureEach { jvmArgs(hotSwapArgs) }
+
+val coverage = providers.gradleProperty("coverage").isPresent
+
 if (name != "tools") {
     tasks.test {
         maxHeapSize = "5120m"
@@ -66,10 +69,16 @@ if (name != "tools") {
             events("passed", "skipped", "failed")
             exceptionFormat = TestExceptionFormat.FULL
         }
-        finalizedBy(tasks.jacocoTestReport)
+        extensions.configure<JacocoTaskExtension> {
+            isEnabled = coverage
+        }
+        if (coverage) {
+            finalizedBy(tasks.jacocoTestReport)
+        }
     }
 
     tasks.jacocoTestReport {
+        enabled = coverage
         dependsOn(tasks.test)
         reports {
             xml.required = true

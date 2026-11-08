@@ -9,7 +9,8 @@ edges = [
     { from = { x = 3079, y = 3249 }, to = { x = 3071, y = 3266 } }, # draynor_stalls_to_pigsty
     { from = { x = 3079, y = 3249 }, to = { x = 3086, y = 3237 } }, # draynor_stall_to_willow_trees
     { from = { x = 3079, y = 3249 }, to = { x = 3072, y = 3250 } }, # draynor_stalls_to_west_trees
-    { from = { x = 3079, y = 3249 }, to = { x = 3079, y = 3265 } }, # draynor_stalls_to_north_trees
+    { from = { x = 3079, y = 3249 }, to = { x = 3080, y = 3270 } }, # draynor_stalls_to_north_trees
+    { from = { x = 3093, y = 3245 }, to = { x = 3080, y = 3270 } }, # draynor_bank_to_north_trees
     { from = { x = 3093, y = 3245 }, to = { x = 3086, y = 3237 } }, # draynor_bank_to_willow_trees
     { from = { x = 3086, y = 3237 }, to = { x = 3097, y = 3235 } }, # draynor_willow_trees_to_south
     { from = { x = 3086, y = 3237 }, to = { x = 3086, y = 3231 } }, # draynor_willow_trees_to_fishing_spot
@@ -24,8 +25,8 @@ edges = [
     { from = { x = 3104, y = 3272 }, to = { x = 3109, y = 3283 } },
     { from = { x = 3109, y = 3283 }, to = { x = 3110, y = 3294 } },
     { from = { x = 3104, y = 3272 }, to = { x = 3094, y = 3272 } },
-    { from = { x = 3094, y = 3272 }, to = { x = 3079, y = 3265 } },
-    { from = { x = 3079, y = 3265 }, to = { x = 3071, y = 3276 } },
+    { from = { x = 3094, y = 3272 }, to = { x = 3080, y = 3270 } },
+    { from = { x = 3080, y = 3270 }, to = { x = 3071, y = 3276 } },
     { from = { x = 3110, y = 3294 }, to = { x = 3100, y = 3294 } },
     { from = { x = 3110, y = 3294 }, to = { x = 3127, y = 3296 } },
     { from = { x = 3127, y = 3296 }, to = { x = 3143, y = 3294 } },
@@ -38,7 +39,8 @@ edges = [
     { from = { x = 3172, y = 3286 }, to = { x = 3162, y = 3288 } },
     { from = { x = 3172, y = 3286 }, to = { x = 3181, y = 3287 } },
     { from = { x = 3181, y = 3287 }, to = { x = 3190, y = 3283 } },
-    { from = { x = 3190, y = 3283 }, to = { x = 3188, y = 3278 } },
+    { from = { x = 3190, y = 3283 }, to = { x = 3188, y = 3278 }, cost = 6, actions = [{ object = { option = "Open", id = "gate_235_closed", x = 3188, y = 3279, success = { object = { id = "gate_235_opened", x = 3189, y = 3281 } } } }, { tile = { x = 3188, y = 3278 } }] }, # open the double gate into the farm
+    { from = { x = 3188, y = 3278 }, to = { x = 3190, y = 3283 }, cost = 6, actions = [{ object = { option = "Open", id = "gate_235_closed", x = 3188, y = 3279, success = { object = { id = "gate_235_opened", x = 3189, y = 3281 } } } }, { tile = { x = 3190, y = 3283 } }] }, # open the double gate out of the farm
     { from = { x = 3167, y = 3291 }, to = { x = 3167, y = 3302 } },
     { from = { x = 3167, y = 3302 }, to = { x = 3176, y = 3307 } },
     { from = { x = 3176, y = 3307 }, to = { x = 3177, y = 3315 } },

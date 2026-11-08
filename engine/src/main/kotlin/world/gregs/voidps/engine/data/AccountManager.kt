@@ -25,9 +25,11 @@ import world.gregs.voidps.engine.map.collision.CollisionStrategyProvider
 import world.gregs.voidps.engine.queue.strongQueue
 import world.gregs.voidps.network.client.Client
 import world.gregs.voidps.network.client.ConnectionQueue
+import world.gregs.voidps.network.login.AccountNames
 import world.gregs.voidps.network.login.protocol.encode.WorldFlag
 import world.gregs.voidps.network.login.protocol.encode.logout
 import world.gregs.voidps.network.login.protocol.encode.sendWorldList
+import world.gregs.voidps.network.login.registration.RegistrationValidator
 import world.gregs.voidps.type.Delta
 import world.gregs.voidps.type.Direction
 import world.gregs.voidps.type.Tile
@@ -48,10 +50,22 @@ class AccountManager(
     private val startTile: Tile
         get() = if (Settings["world.start.tutorial", false]) tutorialTile else homeTile
 
-    fun create(name: String, passwordHash: String): Player = Player(tile = startTile, accountName = name, passwordHash = passwordHash).apply {
+    /**
+     * @param displayName display name to start with; without one username accounts show their account name and
+     * email accounts are given a placeholder until the player picks their own
+     */
+    fun create(name: String, passwordHash: String, displayName: String? = null): Player = Player(tile = startTile, accountName = name, passwordHash = passwordHash).apply {
         this["new_player"] = true
         if (Settings["world.start.tutorial", false]) {
             this["tutorial_stage"] = 0
+        }
+        if (displayName != null) {
+            this["display_name"] = displayName
+        } else if (AccountNames.isEmail(name)) {
+            // Email accounts start with a name taken from the email and pick their own on first login
+            val base = DisplayNames.sanitise(RegistrationValidator.localPart(name))
+            this["display_name"] = DisplayNames.unique(base) { accountDefinitions.taken(it) }
+            this["choose_name"] = true
         }
     }
 
@@ -97,7 +111,7 @@ class AccountManager(
             logout(player, false)
         }
         loadCallback.invoke(player)
-        client?.sendWorldList(Settings["world.id", 16], if (World.members) WorldFlag.MEMBERS else 0)
+        client?.sendWorldList(Settings.world, if (World.members) WorldFlag.MEMBERS else 0)
         player.open(player.interfaces.gameFrame)
         player.variables.sendAll()
         Spawn.player(player)

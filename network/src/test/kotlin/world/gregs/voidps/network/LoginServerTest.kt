@@ -322,6 +322,7 @@ internal class LoginServerTest {
         assertEquals(Response.DATA_CHANGE, writeChannel.readByte().toInt())
         assertEquals(Response.WORLD_FULL, writeChannel.readByte().toInt())
         assertTrue(writeChannel.isClosedForRead)
+        assertFalse(server.online.contains("username"))
     }
 
     @Test
@@ -334,7 +335,7 @@ internal class LoginServerTest {
         writeLoginPacket(readChannel, username = "aLongUsername")
 
         assertEquals(Response.DATA_CHANGE, writeChannel.readByte().toInt())
-        assertEquals(Response.LOGIN_SERVER_REJECTED_SESSION, writeChannel.readByte().toInt())
+        assertEquals(Response.INVALID_CREDENTIALS, writeChannel.readByte().toInt())
         assertTrue(writeChannel.isClosedForRead)
     }
 

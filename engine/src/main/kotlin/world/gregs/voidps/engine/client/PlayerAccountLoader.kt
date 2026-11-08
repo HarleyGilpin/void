@@ -8,6 +8,7 @@ import world.gregs.voidps.engine.data.AccountManager
 import world.gregs.voidps.engine.data.SaveQueue
 import world.gregs.voidps.engine.data.Settings
 import world.gregs.voidps.engine.data.Storage
+import world.gregs.voidps.engine.data.copy
 import world.gregs.voidps.engine.data.definition.AccountDefinitions
 import world.gregs.voidps.engine.entity.World
 import world.gregs.voidps.engine.entity.character.player.Player
@@ -19,8 +20,12 @@ import world.gregs.voidps.network.Response
 import world.gregs.voidps.network.client.Client
 import world.gregs.voidps.network.client.ConnectionQueue
 import world.gregs.voidps.network.client.Instruction
+import world.gregs.voidps.network.login.AccountCreator
 import world.gregs.voidps.network.login.AccountLoader
+import world.gregs.voidps.network.login.AccountNames
+import world.gregs.voidps.network.login.Registration
 import world.gregs.voidps.network.login.protocol.encode.login
+import world.gregs.voidps.network.login.registration.RegistrationResponse
 
 /**
  * Checks password is valid for a player account before logging in
@@ -33,7 +38,8 @@ class PlayerAccountLoader(
     private val saveQueue: SaveQueue,
     private val accountDefinitions: AccountDefinitions,
     private val gameContext: CoroutineDispatcher,
-) : AccountLoader {
+) : AccountLoader,
+    AccountCreator {
     private val logger = InlineLogger()
 
     var update: Boolean = false
@@ -79,6 +85,62 @@ class PlayerAccountLoader(
             client.disconnect(Response.COULD_NOT_COMPLETE_LOGIN)
             return null
         }
+    }
+
+    override fun available(email: String): Int {
+        if (!Settings["accounts.registration", false]) {
+            return RegistrationResponse.REFUSED
+        }
+        if (accountDefinitions.getByAccount(email) != null) {
+            return RegistrationResponse.EMAIL_IN_USE
+        }
+        return RegistrationResponse.SUCCESS
+    }
+
+    /**
+     * Creates an account registered from the login screen; the email is the account name
+     */
+    override suspend fun create(registration: Registration): Int {
+        if (!Settings["accounts.registration", false]) {
+            return RegistrationResponse.REFUSED
+        }
+        return create(registration.email, registration.passwordHash, displayName = null, registration.hostname)
+    }
+
+    /**
+     * Creates and persists an account regardless of the client registration setting, e.g. for the web api.
+     * Username account names double as the display name; email account names use [displayName] when given,
+     * otherwise they're given a placeholder and pick their own on first login.
+     * @return a [RegistrationResponse] code
+     */
+    suspend fun create(accountName: String, passwordHash: String, displayName: String?, hostname: String): Int {
+        val name = AccountNames.normalise(accountName)
+        // Checking and reserving the name together on the game thread stops two requests registering the same name
+        val player = withContext(gameContext) {
+            if (accountDefinitions.taken(name) || displayName != null && accountDefinitions.taken(displayName)) {
+                return@withContext null
+            }
+            val player = accounts.create(name, passwordHash, displayName)
+            accountDefinitions.add(player)
+            player
+        } ?: return RegistrationResponse.EMAIL_IN_USE
+        try {
+            if (!storage.create(player.copy())) {
+                withContext(gameContext) {
+                    accountDefinitions.remove(name)
+                }
+                return RegistrationResponse.EMAIL_IN_USE
+            }
+        } catch (e: Exception) {
+            logger.error(e) { "Failed to create account for $name." }
+            withContext(gameContext) {
+                accountDefinitions.remove(name)
+            }
+            return RegistrationResponse.UNAVAILABLE
+        }
+        AuditLog.info("registered $name from $hostname")
+        logger.info { "Account registered for $name." }
+        return RegistrationResponse.SUCCESS
     }
 
     private fun banned(variables: Map<String, Any>): Boolean {

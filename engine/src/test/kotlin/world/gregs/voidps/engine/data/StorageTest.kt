@@ -46,6 +46,42 @@ abstract class StorageTest {
     }
 
     @Test
+    fun `Create a new account`() {
+        assertTrue(storage.create(save))
+
+        val account = storage.load(save.name)
+
+        assertNotNull(account)
+        assertEquals(save.name, account.name)
+        assertEquals(save.password, account.password)
+        assertEquals(save.variables.keys, account.variables.keys)
+        assertTrue(storage.exists(save.name))
+    }
+
+    @Test
+    fun `Create an existing account fails without overriding`() {
+        storage.save(listOf(save))
+
+        val duplicate = save.copy(password = "different")
+        assertFalse(storage.create(duplicate))
+
+        val account = storage.load(save.name)
+        assertNotNull(account)
+        assertEquals(save.password, account.password)
+    }
+
+    @Test
+    fun `Create an email named account`() {
+        val email = save.copy(name = "Someone@Example.com")
+        assertTrue(storage.create(email))
+
+        assertTrue(storage.exists("someone@example.com"))
+        val account = storage.load("someone@example.com")
+        assertNotNull(account)
+        assertEquals("Someone@Example.com", account.name)
+    }
+
+    @Test
     fun `Store an existing account overrides data`() {
         storage.save(listOf(save))
 
@@ -64,7 +100,7 @@ abstract class StorageTest {
                 put("Bob", ClanRank.Captain)
                 remove("Greg")
             },
-            offers = Array(6) { if (it == 0) ExchangeOffer(2, "whip", 1, 2, OfferState.OpenBuy) else ExchangeOffer.EMPTY },
+            offers = Array(6) { if (it == 0) ExchangeOffer(2, "whip", 1, 2, OfferState.OpenBuy) else ExchangeOffer() },
             history = listOf(ExchangeHistory("item", 123, 321)),
         )
         storage.save(listOf(override))
@@ -128,7 +164,7 @@ abstract class StorageTest {
             for ((key, value) in expected.inventories) {
                 assertContentEquals(value, account.inventories[key])
             }
-            assertEquals(expected.offers.map { it.id }, account.offers.filter { it != ExchangeOffer.EMPTY }.map { it.id })
+            assertEquals(expected.offers.map { it.id }, account.offers.filter { !it.isEmpty() }.map { it.id })
             assertEquals(expected.history, account.history)
             assertEquals(expected.kills, account.kills)
             assertEquals(expected.records, account.records)
