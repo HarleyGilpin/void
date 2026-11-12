@@ -95,6 +95,7 @@ def = 28
 attack_speed = 5
 attack_bonus = 13
 max_hit_crush = 63
+categories = ["chaos_dwarf", "dwarves"]
 
 [chaos_dwarf_chaos_dwarf_battlefield_2]
 id = 8779
